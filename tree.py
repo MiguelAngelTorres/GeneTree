@@ -23,6 +23,7 @@ class Genetreec:
 	def __init__(self, data, label, deepness = 0):
 		self.data = data
 		self.label = label
+		self.deepness = deepness
 		if not isinstance(self.data, pd.DataFrame):
 			print('Exit with status 1 \n  Error while initialization tree - data must be a pandas.DataFrame')
 			sys.exit(1)
@@ -42,14 +43,13 @@ class Genetreec:
 			self.deepness = len(data.columns)
 
 
-####################################
 	def warm(self):
 		self.root = Leaf(self, [True] * self.data.shape[0])
 		self.root = self.root.warm(self.deepness)
 		self.root.setLeaveActions()
 
-	def evaluate(self, date):
-		return self.root.evaluate(date)
+	def evaluate(self, row):
+		return self.root.evaluate(row)
 
 	def selectRandomBranch(self):
 		r = randrange(5)
@@ -78,18 +78,15 @@ class Genetreec:
 		self.root.mutate()
 		return
 
-	def getBuySell(self):
-		return self.root.getBuySell()
-
 class Node:
-	func = None     # Indice que separa los datos
-	pivot = None    # pivote que separa los datos
+	column = None     # Column name to split
+	pivot = None      # Pivot to split data
 
-	right = None   # Node o Leaf positivo
-	left = None    # Node o Leaf negativo
+	right = None   # Node or Leaf positive
+	left = None    # Node or Leaf negative
 
-	def __init__(self, func, pivot, right, left):
-		self.func = func
+	def __init__(self, column, pivot, right, left):
+		self.column = column
 		self.pivot = pivot
 		self.right = right
 		self.left = left
@@ -98,16 +95,16 @@ class Node:
 		self.right.setLeaveActions()
 		self.left.setLeaveActions()
 
-	def evaluate(self, date):
-		if indicator.getValueByIndex(date, self.func) <= self.pivot:
-			return self.left.evaluate(date)
-		return self.right.evaluate(date)
+	def evaluate(self, row):
+		if row[[self.column]] < self.pivot:
+			return self.left.evaluate(row)
+		return self.right.evaluate(row)
 
 	def plot(self):
-		print('---- Function ' + self.func.name() + ' < ' + str(self.pivot) + ' ----')
+		print('---- Column ' + self.column + ' < ' + str(self.pivot) + ' ----')
 		self.left.plot()
 		print('\n')
-		print('---- Function ' + self.func.name() + ' >= ' + str(self.pivot) + ' ----')
+		print('---- Column ' + self.column + ' >= ' + str(self.pivot) + ' ----')
 		self.right.plot()
 
 	def selectRandomBranch(self):
@@ -116,24 +113,27 @@ class Node:
 		if r == 0: # Elegida rama izq
 			side, father = self.left.selectRandomBranch()
 			if isinstance(father, bool):
-				if father == True: 		# Si el elegido es el hijo
+				if father == True: 		# If a son is the chosen one
 					return "left", self
-				else:					# Si el hijo es una hoja
+				else:					# If son is a leaf
 					return None, True
-			return side, father				# Si el elegido es más profundo
+			return side, father				# If chosen one is deep
 		if r == 2: # Elegida rama der
 			side, father = self.right.selectRandomBranch()
 			if isinstance(father, bool):
-				if father == True: 		# Si el elegido es el hijo
+				if father == True: 		# If chosen one is a son
 					return "right", self
-				else:					# Si el hijo es una hoja
+				else:					# If son is a leaf
 					return None, True
-			return side, father				# Si el elegido es más profundo
+			return side, father				# If chosen one is deep
 		if r == 1:
 			return None, True
 	def getNumNodes(self):
 		return self.left.getNumNodes() + self.right.getNumNodes() + 1
 
+
+
+		#######################
 	def mutate(self):
 		r = randrange(5)
 		if r == 0:
@@ -149,10 +149,6 @@ class Node:
 		self.right.mutate()
 		return
 
-	def getBuySell(self):
-		buy, sell = self.left.getBuySell()
-		buy2, sell2 = self.right.getBuySell()
-		return buy+buy2, sell+sell2
 
 
 
@@ -176,8 +172,8 @@ class Leaf:
 				else:
 					ret_node = self
 		else:		# Build two leaves and return the new node that keeps this leaves
-			right = Leaf(criteria & self.partition)
-			left = Leaf(~criteria & self.partition)
+			right = Leaf(self.root, criteria & self.partition)
+			left = Leaf(self.root, ~criteria & self.partition)
 
 			if levels>1 :
 				right = right.warm(levels-1)
@@ -215,12 +211,13 @@ class Leaf:
 						l_entropy = 0.5
 						r_entropy = 0.5
 					else:
-						classes = list(dict.fromkeys(self.root.label))
+						classes = list(dict.fromkeys(self.root.label.ix[:,0].unique()))
 						r_entropy = 1
 						l_entropy = 1
+
 						for clas in classes:
-							r_entropy += entropy( sum( (splitColumn[self.partition]>=x) & (self.root.label[self.partition]==clas)) / n_right )
-							l_entropy += entropy( sum( (splitColumn[self.partition]<x)  & (self.root.label[self.partition]==clas)) / n_left )
+							r_entropy += entropy( sum( (splitColumn[self.partition]>=x) & self.root.label.ix[:,0][self.partition]==clas) / n_right )
+							l_entropy += entropy( sum( (splitColumn[self.partition]<x)  & self.root.label.ix[:,0][self.partition]==clas) / n_left )
 						r_entropy = n_right * total_inverse * r_entropy
 						l_entropy = n_left  * total_inverse * l_entropy 
 
@@ -231,7 +228,7 @@ class Leaf:
 			criteria = splitColumn < pivot			# builds the next mask
 			print(pivot)
 			left_count = sum(criteria & self.partition)
-			if left_count < 3 or sum(self.partition)-left_count < 3: # Pocos datos para separar
+			if left_count < 3 or sum(self.partition)-left_count < 3: # Low data to split
 				return (0,0)
 
 			return (criteria, pivot)					# Return pivot and mask
@@ -239,43 +236,20 @@ class Leaf:
 
 
 
-# Selecciona una acción para la hoja (Solo se usa en el calentamiento)
-#	Suma los datos de la hoja (-2, -1, 1 o 2)
-#	Si la suma es
-#		-2 <= x <= 2 entonces no se hace nada
-#		x < -2       entonces se compra
-#		2 < x		 entonces se vende
+# Select the tag the leaf will have
 	def setLeaveActions(self):
-		df = indicator.df[self.partition]
-		sell_df = sum(df['tag'] > 0)
-		buy_df = sum(df['tag'] < 0)
-		double_sell_df = sum(df['tag'] == 2)
-		double_buy_df = sum(df['tag'] == -2)
-		action_sum = sell_df - buy_df + double_sell_df - double_buy_df / (sell_df + buy_df)
+		###########################################33
 
-		if action_sum > 0:
-			if action_sum <= 2:
-				self.tag = 'Stop'
-			else:
-				self.tag = 'Sell'
-		else:
-			if action_sum >= -2:
-				self.tag = 'Stop'
-			else:
-				self.tag = 'Buy'
-		self.partition = None
-		return
-
-# Devuelve la acción de la hoja
+# Return the expected class
 	def evaluate(self, date):
 		return self.tag
 
-# Gráfico del arbol, por ahora es en terminal
+# Plot the try, on terminal by now
 	def plot(self):
 		print(self.tag)
 		return None
 
-# La selección de rama ha entrado hasta una hoja, notifica el error
+# The selection arrived to a leaf, so return the parent of that leaf
 	def selectRandomBranch(self):
 		return None, False
 
@@ -283,6 +257,8 @@ class Leaf:
 	def getNumNodes(self):
 		return 0
 
+
+		#################
 	def mutate(self):
 		r = randrange(7)
 		if r == 0:
@@ -292,10 +268,3 @@ class Leaf:
 		elif r == 2:
 			self.tag = 'Sell'
 		return
-
-	def getBuySell(self):
-		if self.tag == 'Buy':
-			return 1,0
-		if self.tag == 'Sell':
-			return 0,1
-		return 0,0
