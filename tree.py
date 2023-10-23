@@ -46,7 +46,7 @@ class Genetreec:
 	def warm(self):
 		self.root = Leaf(self, [True] * self.data.shape[0])
 		self.root = self.root.warm(self.deepness)
-		self.root.setLeaveActions()
+		self.root.setLeafTag()
 
 	def evaluate(self, row):
 		return self.root.evaluate(row)
@@ -91,9 +91,9 @@ class Node:
 		self.right = right
 		self.left = left
 
-	def setLeaveActions(self):
-		self.right.setLeaveActions()
-		self.left.setLeaveActions()
+	def setLeafTag(self):
+		self.right.setLeafTag()
+		self.left.setLeafTag()
 
 	def evaluate(self, row):
 		if row[[self.column]] < self.pivot:
@@ -131,9 +131,7 @@ class Node:
 	def getNumNodes(self):
 		return self.left.getNumNodes() + self.right.getNumNodes() + 1
 
-
-
-		#######################
+	# TODO
 	def mutate(self):
 		r = randrange(5)
 		if r == 0:
@@ -150,23 +148,20 @@ class Node:
 		return
 
 
-
-
-
 class Leaf:
-	root = None 		# Tree's root
-	tag = None 			# Decision to take
-	partition = None	# Boolean vector that mask the initial data belonging to the leaf
+	root = None 			# Tree's root
+	tag = None 				# Decision to take
+	partition = None		# Boolean vector that mask the initial data belonging to the leaf
 
 	def __init__(self, root, partition):
 		self.root = root
 		self.partition = partition
 
- # Split the data into two new leaves
+	# Split the data into two new leaves
 	def warm(self, levels):
 		column = self.root.data.columns[randrange(len(self.root.data.columns))]  # Random column to split
 		(criteria, pivot) = self.select_pivot(column)
-		if isinstance(criteria, int): # Not a good split
+		if isinstance(criteria, int): # Not a good split #TODO: Efficiency not good, random column select should be avoid
 				if self.root.deepness == levels:    # If first node, take an other column to split
 					ret_node = self.warm(levels)
 				else:
@@ -183,17 +178,17 @@ class Leaf:
 
 
 
-# Look for the pivot with best split, depending of the generated entropy
+	# Look for the pivot with best split, depending of the generated entropy
 	def select_pivot(self, column):
 		splitColumn = self.root.data[column]
 		if splitColumn.dtype == np.float64 or splitColumn.dtype == np.int64:
 			max_val = splitColumn[self.partition].min()
 			min_val = splitColumn[self.partition].max()
 			if splitColumn.dtype == np.int64:
-					grill = [math.ceil((max_val - min_val)*(x/10)+min_val) for x in range(1,10)]	# Create pivot grill for int
-					grill = list(dict.fromkeys(grill))	
+				grill = [math.ceil((max_val - min_val)*(x/10)+min_val) for x in range(1,10)]	# Create pivot grill for int
+				grill = list(dict.fromkeys(grill))
 			else:
-					grill = [(max_val - min_val)*(x/10)+min_val for x in range(1,10)]  # Create pivot grill for float
+				grill = [(max_val - min_val)*(x/10)+min_val for x in range(1,10)]  # Create pivot grill for float
 	
 			grill_entropy = []
 			
@@ -203,56 +198,47 @@ class Leaf:
 				n_left  = sum(splitColumn[self.partition] < x)
 				n_right = sum(splitColumn[self.partition] >= x)
 
-				if n_left < 3: # Low data to split
+				if n_left < 3 or n_right < 3: # Low data to split #TODO: use a parameter instead of hardcoded number
 					l_entropy = 0.5
 					r_entropy = 0.5
 				else:
-					if n_right < 3:  # Low data to split
-						l_entropy = 0.5
-						r_entropy = 0.5
-					else:
-						classes = list(dict.fromkeys(self.root.label.ix[:,0].unique()))
-						r_entropy = 1
-						l_entropy = 1
+					classes = list(dict.fromkeys(self.root.label.iloc[:,0].unique()))
+					r_entropy = 1
+					l_entropy = 1
 
-						for clas in classes:
-							r_entropy += entropy( sum( (splitColumn[self.partition]>=x) & self.root.label.ix[:,0][self.partition]==clas) / n_right )
-							l_entropy += entropy( sum( (splitColumn[self.partition]<x)  & self.root.label.ix[:,0][self.partition]==clas) / n_left )
-						r_entropy = n_right * total_inverse * r_entropy
-						l_entropy = n_left  * total_inverse * l_entropy 
+					for clas in classes:
+						r_entropy += entropy(sum((splitColumn[self.partition] >= x) & self.root.label.iloc[:, 0][self.partition] == clas) / n_right)
+						l_entropy += entropy(sum((splitColumn[self.partition] < x) & self.root.label.iloc[:, 0][self.partition] == clas) / n_left)
+					r_entropy = n_right * total_inverse * r_entropy
+					l_entropy = n_left * total_inverse * l_entropy
 
 				grill_entropy.append(l_entropy + r_entropy)
 
-			min_index = grill_entropy.index(min( grill_entropy ))
+			min_index = grill_entropy.index(min(grill_entropy))
 			pivot = grill[min_index]					# Best pivot
 			criteria = splitColumn < pivot			# builds the next mask
-			print(pivot)
 			left_count = sum(criteria & self.partition)
 			if left_count < 3 or sum(self.partition)-left_count < 3: # Low data to split
-				return (0,0)
+				return 0, 0
 
-			return (criteria, pivot)					# Return pivot and mask
+			return criteria, pivot					# Return pivot and mask
 
+	# Select the tag the leaf will have
+	def setLeafTag(self):
+		self.tag = self.root.label.iloc[:, 0].mask(self.partition).value_counts().idxmax()
 
-
-
-# Select the tag the leaf will have
-	def setLeaveActions(self):
-		###########################################33
-
-# Return the expected class
+	# Return the expected class
 	def evaluate(self, date):
 		return self.tag
 
-# Plot the try, on terminal by now
+	# Plot the try, on terminal by now
 	def plot(self):
-		print(self.tag)
+		print(str(self.tag) + ' with ' + str(sum(self.partition)) + ' observations')
 		return None
 
-# The selection arrived to a leaf, so return the parent of that leaf
+	# The selection arrived to a leaf, so return the parent of that leaf
 	def selectRandomBranch(self):
 		return None, False
-
 
 	def getNumNodes(self):
 		return 0
