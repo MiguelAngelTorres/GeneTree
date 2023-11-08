@@ -1,8 +1,8 @@
 from random import randrange
+from numpy.random import normal
 import pandas as pd
 import numpy as np
 import math
-import copy
 import sys
 
 
@@ -71,10 +71,12 @@ class Genetreec:
 
 	def mutate(self):
 		self.root.mutate()
+		self.root.repartition([True] * self.data.shape[0])
 		return
 
 
 class Node:
+	root = None       # Tree's root
 	column = None     # Column name to split
 	pivot = None      # Pivot to split data
 
@@ -132,21 +134,27 @@ class Node:
 	def mutate(self):
 		r = randrange(5)
 		if r == 0:
-			self.pivot = random.normal(self.pivot, abs(self.pivot/4))
+			self.pivot = normal(self.pivot, abs(self.pivot/4))
 		if r == 1:
-			self.func.mutate()
-		if r == 2:
-			self.func = copy.deepcopy(indivector[randrange(13)])
-			val = self.func.getValues(False)
-			self.pivot = val['values'].mean()
+			columns = self.root.data.columns
+			columns = columns[columns != self.column]
+			self.column = columns[randrange(len(columns))]
+			self.pivot = self.root.data[self.column].mean()
 
 		self.left.mutate()
 		self.right.mutate()
 		return
 
+	def repartition(self, partition):
+		split_column = self.root.data[self.column]
+		criteria = split_column < self.pivot
+		self.right.repartition(criteria & self.partition)
+		self.left.repartition(criteria & self.partition)
+		return
+
 
 class Leaf:
-	root = None 		# Tree's root
+	root = None 			# Tree's root
 	tag = None 				# Decision to take
 	partition = None		# Boolean vector that mask the initial data belonging to the leaf
 
@@ -238,13 +246,11 @@ class Leaf:
 	def get_num_nodes(self):
 		return 0
 
-	#################
+	# TODO
 	def mutate(self):
-		r = randrange(7)
-		if r == 0:
-			self.tag = 'Buy'
-		elif r == 1:
-			self.tag = 'Stop'
-		elif r == 2:
-			self.tag = 'Sell'
+		return
+
+	def repartition(self, partition):
+		self.partition = partition
+		self.set_leaf_tag()
 		return
