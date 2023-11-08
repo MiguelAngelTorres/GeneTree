@@ -83,7 +83,8 @@ class Node:
 	right: Leaf = None   # Node or Leaf positive
 	left: Leaf = None    # Node or Leaf negative
 
-	def __init__(self, column, pivot, right, left):
+	def __init__(self, root, column, pivot, right, left):
+		self.root = root
 		self.column = column
 		self.pivot = pivot
 		self.right = right
@@ -178,7 +179,7 @@ class Leaf:
 			if levels > 1:
 				right = right.warm(levels-1)
 				left = left.warm(levels-1)
-			ret_node = Node(column, pivot, right, left)
+			ret_node = Node(self.root, column, pivot, right, left)
 		return ret_node
 
 	# Look for the pivot with best split, depending of the generated entropy
