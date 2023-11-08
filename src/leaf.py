@@ -88,7 +88,7 @@ class Leaf:
         self.tag = self.root.label.iloc[:, 0].mask(self.partition).value_counts().idxmax()
 
     # Return the expected class
-    def evaluate(self, date):
+    def evaluate(self):
         return self.tag
 
     # Plot the try, on terminal by now
