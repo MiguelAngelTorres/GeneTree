@@ -5,32 +5,38 @@ from random import randrange
 
 
 class Genetree:
-    root = None      # First Node
-    data = None      # DataFrame where columns are saved
-    label = None     # DataFrame where label for each row are saved
-    deepness = None  # Max deepness of tree
+    root = None          # First Node
+    data = None          # DataFrame where columns are saved
+    label = None         # DataFrame where label for each row are saved
+    deepness = None      # Max deepness of tree
+    features = None
+    n_features = None    # Number of features
 
     def __init__(self, data, label, deepness = 0):
-        self.data = data
-        self.label = label
-        self.deepness = deepness
-        if not isinstance(self.data, pd.DataFrame):
+        if not isinstance(data, pd.DataFrame):
             print('Exit with status 1 \n  Error while initialization tree - data must be a pandas.DataFrame')
             sys.exit(1)
-        if not isinstance(self.label, pd.DataFrame):
+        if not isinstance(label, pd.DataFrame):
             print('Exit with status 1 \n  Error while initialization tree - label must be a pandas.DataFrame')
             sys.exit(1)
-        if self.data.shape[0] < 10:
+        if data.shape[0] < 10:
             print('Exit with status 1 \n  Error while initialization tree - data must have at least 10 rows')
             sys.exit(1)
-        if len(self.label.columns) != 1:
+        if len(label.columns) != 1:
             print('Exit with status 1 \n  Error while initialization tree - label must have a single column with label values')
             sys.exit(1)
-        if self.data.shape[0] != self.label.shape[0]:
+        if data.shape[0] != label.shape[0]:
             print('Exit with status 1 \n  Error while initialization tree - the data and label rows cant be different')
             sys.exit(1)
-        if self.deepness == 0:
-            self.deepness = len(data.columns)
+
+        self.data = data
+        self.features = list(data.columns)
+        self.n_features = len(self.features)
+        self.label = label.squeeze()
+        if deepness == 0:
+            self.deepness = self.n_features
+        else:
+            self.deepness = deepness
 
     def warm(self):
         self.root = Leaf(self, [True] * self.data.shape[0])

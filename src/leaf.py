@@ -1,7 +1,8 @@
 from src.node import Node
-from random import randrange
+from random import sample
 import numpy as np
 import math
+import sys
 
 
 def entropy(v):           # v es la proporcion de la clase (frec/total)
@@ -21,21 +22,30 @@ class Leaf:
 
     # Split the data into two new leaves
     def warm(self, levels):
-        column = self.root.data.columns[randrange(len(self.root.data.columns))]  # random column to split
-        (criteria, pivot) = self.select_pivot(column)
-        if isinstance(criteria, int):  # not a good split #TODO: Efficiency not good, random column select should be avoid
-            if self.root.deepness == levels:    # if first node, take an other column to split
-                ret_node = self.warm(levels)
-            else:
-                ret_node = self
-        else:		# build two leaves and return the new node that keeps this leaves
-            right = Leaf(self.root, criteria & self.partition)
-            left = Leaf(self.root, ~criteria & self.partition)
+        ret_node = self
+        if sum(self.partition) < 3 * 2:  # Min data on leaf to split multipled by num of branches (2) # TODO: use a parameter instead of hardcoded number
+            return ret_node
 
-            if levels > 1:
-                right = right.warm(levels-1)
-                left = left.warm(levels-1)
-            ret_node = Node(self.root, column, pivot, right, left)
+        criteria = None
+        shuffle_columns = sample(self.root.features, self.root.n_features)  # random column to split
+
+        for column in shuffle_columns:
+            (criteria, pivot) = self.select_pivot(column)
+            if criteria is not None:  # If good split
+                right = Leaf(self.root, criteria & self.partition)
+                left = Leaf(self.root, ~criteria & self.partition)
+
+                if levels > 1:
+                    right = right.warm(levels-1)
+                    left = left.warm(levels-1)
+                ret_node = Node(self.root, column, pivot, right, left)
+                break
+
+        if criteria is None:
+            if levels == self.root.deepness:  # First node
+                print('Exit with status 1 \n  Error while initialization tree - the first branch cannot be generated because the data is not splitable')
+                sys.exit(1)
+
         return ret_node
 
     # Look for the pivot with best split, depending of the generated entropy
@@ -54,21 +64,21 @@ class Leaf:
 
             total = sum(self.partition)
             total_inverse = 1 / total
+            classes = list(dict.fromkeys(self.root.label.unique()))
             for x in grill:
                 n_left = sum(split_column[self.partition] < x)
                 n_right = sum(split_column[self.partition] >= x)
 
-                if n_left < 3 or n_right < 3:  # low data to split #TODO: use a parameter instead of hardcoded number
+                if n_left < 3 or n_right < 3:  # low data to split # TODO: use a parameter instead of hardcoded number
                     l_entropy = 0.5
                     r_entropy = 0.5
                 else:
-                    classes = list(dict.fromkeys(self.root.label.iloc[:, 0].unique()))
-                    r_entropy = 1
+                    r_entropy = 1  # TODO: Review this hardcoded number
                     l_entropy = 1
 
                     for clas in classes:
-                        r_entropy += entropy(sum((split_column[self.partition] >= x) & self.root.label.iloc[:, 0][self.partition] == clas) / n_right)
-                        l_entropy += entropy(sum((split_column[self.partition] < x) & self.root.label.iloc[:, 0][self.partition] == clas) / n_left)
+                        r_entropy += entropy(sum((split_column[self.partition] >= x) & self.root.label[self.partition] == clas) / n_right)
+                        l_entropy += entropy(sum((split_column[self.partition] < x) & self.root.label[self.partition] == clas) / n_left)
                     r_entropy = n_right * total_inverse * r_entropy
                     l_entropy = n_left * total_inverse * l_entropy
 
@@ -79,16 +89,16 @@ class Leaf:
             criteria = split_column < pivot  # builds the next mask
             left_count = sum(criteria & self.partition)
             if left_count < 3 or sum(self.partition)-left_count < 3:  # low data to split
-                return 0, 0
+                return None, None
 
             return criteria, pivot  # return mask and pivot
 
     # Select the tag the leaf will have
     def set_leaf_tag(self):
-        self.tag = self.root.label.iloc[:, 0].mask(self.partition).value_counts().idxmax()
+        self.tag = self.root.label.mask(self.partition).value_counts().idxmax()
 
     # Return the expected class
-    def evaluate(self):
+    def evaluate(self, row):
         return self.tag
 
     # Plot the try, on terminal by now
@@ -103,7 +113,6 @@ class Leaf:
     def get_num_nodes(self):
         return 0
 
-    # TODO
     def mutate(self):
         return
 
