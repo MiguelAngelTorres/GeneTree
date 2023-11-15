@@ -50,7 +50,7 @@ class Leaf:
 
     # Look for the pivot with best split, depending of the generated entropy
     def select_pivot(self, column):
-        split_column = self.root.data[column]
+        split_column = self.root.data[column].to_numpy()
         if split_column.dtype == np.float64 or split_column.dtype == np.int64:
             max_val = split_column[self.partition].min()
             min_val = split_column[self.partition].max()
@@ -66,8 +66,11 @@ class Leaf:
             total_inverse = 1 / total
             classes = list(dict.fromkeys(self.root.label.unique()))
             for x in grill:
-                n_left = sum(split_column[self.partition] < x)
-                n_right = sum(split_column[self.partition] >= x)
+                left_split = split_column < x
+                right_split = np.logical_and(~left_split, self.partition)
+                left_split = np.logical_and(left_split, self.partition)
+                n_left = sum(left_split)
+                n_right = total - n_left
 
                 if n_left < 3 or n_right < 3:  # low data to split # TODO: use a parameter instead of hardcoded number
                     l_entropy = 0.5
@@ -77,25 +80,24 @@ class Leaf:
                     l_entropy = 1
 
                     for clas in classes:
-                        r_entropy += entropy(sum((split_column[self.partition] >= x) & self.root.label[self.partition] == clas) / n_right)
-                        l_entropy += entropy(sum((split_column[self.partition] < x) & self.root.label[self.partition] == clas) / n_left)
+                        r_entropy += entropy(sum(self.root.label[right_split] == clas) / n_right)
+                        l_entropy += entropy(sum(self.root.label[left_split] == clas) / n_left)
                     r_entropy = n_right * total_inverse * r_entropy
                     l_entropy = n_left * total_inverse * l_entropy
 
                 grill_entropy.append(l_entropy + r_entropy)
 
-            min_index = grill_entropy.index(min(grill_entropy))
-            pivot = grill[min_index]  # best pivot
+            pivot = grill[grill_entropy.index(min(grill_entropy))]  # best pivot
             criteria = split_column < pivot  # builds the next mask
-            left_count = sum(criteria & self.partition)
-            if left_count < 3 or sum(self.partition)-left_count < 3:  # low data to split
+            left_count = sum(np.logical_and(criteria, self.partition))
+            if left_count < 3 or total-left_count < 3:  # low data to split
                 return None, None
 
             return criteria, pivot  # return mask and pivot
 
     # Select the tag the leaf will have
     def set_leaf_tag(self):
-        self.tag = self.root.label.mask(self.partition).value_counts().idxmax()
+        self.tag = self.root.label[self.partition].value_counts().idxmax()
 
     # Return the expected class
     def evaluate(self, row):

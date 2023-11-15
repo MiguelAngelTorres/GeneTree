@@ -8,7 +8,7 @@ data = pd.read_csv("iris-species/Iris.csv")
 tree = Genetree(data[['SepalLengthCm', 'SepalWidthCm', 'PetalLengthCm', 'PetalWidthCm']], data[['Species']])
 
 times = []
-for i in range(1, 20):
+for i in range(1, 100):
     tree = Genetree(data[['SepalLengthCm', 'SepalWidthCm', 'PetalLengthCm', 'PetalWidthCm']], data[['Species']])
     start = time.time()
     tree.warm()

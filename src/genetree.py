@@ -71,3 +71,7 @@ class Genetree:
         self.root.mutate()
         self.root.repartition([True] * self.data.shape[0])
         return
+
+    def plot(self):
+        self.root.plot()
+        return
