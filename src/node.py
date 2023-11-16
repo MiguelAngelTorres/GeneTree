@@ -3,15 +3,15 @@ from numpy.random import normal
 
 
 class Node:
-    root = None       # Tree's root
+    tree = None       # Tree
     column = None     # Column name to split
     pivot = None      # Pivot to split data
 
-    right = None   # Node or Leaf positive
-    left = None    # Node or Leaf negative
+    right = None      # Node or Leaf positive
+    left = None       # Node or Leaf negative
 
-    def __init__(self, root, column, pivot, right, left):
-        self.root = root
+    def __init__(self, tree, column, pivot, right, left):
+        self.tree = tree
         self.column = column
         self.pivot = pivot
         self.right = right
@@ -64,18 +64,18 @@ class Node:
         if r == 0:
             self.pivot = normal(self.pivot, abs(self.pivot/4))
         if r == 1:
-            columns = self.root.data.columns
+            columns = self.tree.data.columns
             columns = columns[columns != self.column]
             self.column = columns[randrange(len(columns))]
-            self.pivot = self.root.data[self.column].mean()
+            self.pivot = self.tree.data[self.column].mean()
 
         self.left.mutate()
         self.right.mutate()
         return
 
     def repartition(self, partition):
-        split_column = self.root.data[self.column]
+        split_column = self.tree.data[self.column]
         criteria = split_column < self.pivot
-        self.right.repartition(criteria & self.partition)
-        self.left.repartition(criteria & self.partition)
+        self.right.repartition(criteria & partition)
+        self.left.repartition(criteria & partition)
         return

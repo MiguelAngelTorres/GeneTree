@@ -12,37 +12,37 @@ def entropy(v):           # v es la proporcion de la clase (frec/total)
 
 
 class Leaf:
-    root = None 			# Tree's root
+    tree = None 			# Tree
     tag = None 				# Decision to take
     partition = None		# Boolean vector that mask the initial data belonging to the leaf
 
-    def __init__(self, root, partition):
-        self.root = root
+    def __init__(self, tree, partition):
+        self.tree = tree
         self.partition = partition
 
     # Split the data into two new leaves
     def warm(self, levels):
         ret_node = self
-        if sum(self.partition) < self.root.min_child_per_leaf * 2:  # min data on leaf to split multipled by num of branches (2)
+        if sum(self.partition) < self.tree.genetree.min_child_per_leaf * 2:  # min data on leaf to split multipled by num of branches (2)
             return ret_node
 
         criteria = None
-        shuffle_columns = sample(self.root.features, self.root.n_features)  # random column to split
+        shuffle_columns = sample(self.tree.genetree.features, self.tree.genetree.n_features)  # random column to split
 
         for column in shuffle_columns:
             (criteria, pivot) = self.select_pivot(column)
             if criteria is not None:  # If good split
-                right = Leaf(self.root, criteria & self.partition)
-                left = Leaf(self.root, ~criteria & self.partition)
+                right = Leaf(self.tree, criteria & self.partition)
+                left = Leaf(self.tree, ~criteria & self.partition)
 
                 if levels > 1:
                     right = right.warm(levels-1)
                     left = left.warm(levels-1)
-                ret_node = Node(self.root, column, pivot, right, left)
+                ret_node = Node(self.tree, column, pivot, right, left)
                 break
 
         if criteria is None:
-            if levels == self.root.deepness:  # First node
+            if levels == self.tree.genetree.deepness:  # First node
                 print('Exit with status 1 \n  Error while initialization tree - the first branch cannot be generated because the data is not splitable')
                 sys.exit(1)
 
@@ -50,7 +50,7 @@ class Leaf:
 
     # Look for the pivot with best split, depending of the generated entropy
     def select_pivot(self, column):
-        split_column = self.root.data[column].to_numpy()
+        split_column = self.tree.genetree.data[column].to_numpy()
         if split_column.dtype == np.float64 or split_column.dtype == np.int64:
             max_val = split_column[self.partition].min()
             min_val = split_column[self.partition].max()
@@ -63,7 +63,7 @@ class Leaf:
 
             total = sum(self.partition)
             total_inverse = 1 / total
-            classes = list(dict.fromkeys(self.root.label.unique()))
+            classes = list(dict.fromkeys(self.tree.genetree.label.unique()))
             for x in grill:
                 left_split = split_column < x
                 right_split = np.logical_and(~left_split, self.partition)
@@ -71,7 +71,7 @@ class Leaf:
                 n_left = sum(left_split)
                 n_right = total - n_left
 
-                if n_left < self.root.min_child_per_leaf or n_right < self.root.min_child_per_leaf:  # low data to split
+                if n_left < self.tree.genetree.min_child_per_leaf or n_right < self.tree.genetree.min_child_per_leaf:  # low data to split
                     l_entropy = 0.5
                     r_entropy = 0.5
                 else:
@@ -79,8 +79,8 @@ class Leaf:
                     l_entropy = 1
 
                     for clas in classes:
-                        r_entropy += entropy(sum(self.root.label[right_split] == clas) / n_right)
-                        l_entropy += entropy(sum(self.root.label[left_split] == clas) / n_left)
+                        r_entropy += entropy(sum(self.tree.genetree.label[right_split] == clas) / n_right)
+                        l_entropy += entropy(sum(self.tree.genetree.label[left_split] == clas) / n_left)
                     r_entropy = n_right * total_inverse * r_entropy
                     l_entropy = n_left * total_inverse * l_entropy
 
@@ -89,14 +89,14 @@ class Leaf:
             pivot = grill[grill_entropy.index(min(grill_entropy))]  # best pivot
             criteria = split_column < pivot  # builds the next mask
             left_count = sum(np.logical_and(criteria, self.partition))
-            if left_count < self.root.min_child_per_leaf or total-left_count < self.root.min_child_per_leaf:  # low data to split
+            if left_count < self.tree.genetree.min_child_per_leaf or total-left_count < self.tree.genetree.min_child_per_leaf:  # low data to split
                 return None, None
 
             return criteria, pivot  # return mask and pivot
 
     # Select the tag the leaf will have
     def set_leaf_tag(self):
-        self.tag = self.root.label[self.partition].value_counts().idxmax()
+        self.tag = self.tree.genetree.label[self.partition].value_counts().idxmax()
 
     # Return the expected class
     def evaluate(self, row):

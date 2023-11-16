@@ -5,14 +5,11 @@ import time
 
 
 data = pd.read_csv("iris-species/Iris.csv")
-tree = Genetree(data[['SepalLengthCm', 'SepalWidthCm', 'PetalLengthCm', 'PetalWidthCm']], data[['Species']])
 
 times = []
-for i in range(1, 100):
-    tree = Genetree(data[['SepalLengthCm', 'SepalWidthCm', 'PetalLengthCm', 'PetalWidthCm']], data[['Species']])
-    start = time.time()
-    tree.warm()
-    end = time.time()
-    times.append(end-start)
+start = time.time()
+genetree = Genetree(data[['SepalLengthCm', 'SepalWidthCm', 'PetalLengthCm', 'PetalWidthCm']], data[['Species']])
+end = time.time()
+times.append(end-start)
 
-print("\nMean time elapsed on warm: " + str(mean(times)))
+print("\nMean time elapsed on warm: " + str(mean(times)/100))
