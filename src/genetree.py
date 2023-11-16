@@ -5,14 +5,17 @@ from random import randrange
 
 
 class Genetree:
-    root = None          # First Node
-    data = None          # DataFrame where columns are saved
-    label = None         # DataFrame where label for each row are saved
-    deepness = None      # Max deepness of tree
-    features = None
-    n_features = None    # Number of features
+    root = None                # First Node
+    data = None                # DataFrame where columns are saved
+    label = None               # DataFrame where label for each row are saved
 
-    def __init__(self, data, label, deepness = 0):
+    deepness = None            # Max deepness of tree
+    min_child_per_leaf = None  # Min number of observations per leaf
+
+    features = None
+    n_features = None          # Number of features
+
+    def __init__(self, data, label, deepness=0, min_child_per_leaf=3):
         if not isinstance(data, pd.DataFrame):
             print('Exit with status 1 \n  Error while initialization tree - data must be a pandas.DataFrame')
             sys.exit(1)
@@ -28,6 +31,12 @@ class Genetree:
         if data.shape[0] != label.shape[0]:
             print('Exit with status 1 \n  Error while initialization tree - the data and label rows cant be different')
             sys.exit(1)
+        if deepness < 0:
+            print('Exit with status 1 \n  Error while initialization tree - deepness must be greater than 0')
+            sys.exit(1)
+        if min_child_per_leaf <= 0:
+            print('Exit with status 1 \n  Error while initialization tree - min_child_per_leaf must be greater than 0')
+            sys.exit(1)
 
         self.data = data
         self.features = list(data.columns)
@@ -37,6 +46,7 @@ class Genetree:
             self.deepness = self.n_features
         else:
             self.deepness = deepness
+        self.min_child_per_leaf = min_child_per_leaf
 
     def warm(self):
         self.root = Leaf(self, [True] * self.data.shape[0])

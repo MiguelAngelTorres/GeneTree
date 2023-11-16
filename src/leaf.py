@@ -23,7 +23,7 @@ class Leaf:
     # Split the data into two new leaves
     def warm(self, levels):
         ret_node = self
-        if sum(self.partition) < 3 * 2:  # Min data on leaf to split multipled by num of branches (2) # TODO: use a parameter instead of hardcoded number
+        if sum(self.partition) < self.root.min_child_per_leaf * 2:  # min data on leaf to split multipled by num of branches (2)
             return ret_node
 
         criteria = None
@@ -55,10 +55,9 @@ class Leaf:
             max_val = split_column[self.partition].min()
             min_val = split_column[self.partition].max()
             if split_column.dtype == np.int64:
-                grill = [math.ceil((max_val - min_val)*(x/10)+min_val) for x in range(1, 10)]  # create pivot grill for int
-                grill = list(dict.fromkeys(grill))
+                grill = sample(range(1, 100), 10)  # create pivot grill for int
             else:
-                grill = [(max_val - min_val)*(x/10)+min_val for x in range(1, 10)]  # create pivot grill for float
+                grill = np.random.uniform(min_val, max_val, 10)  # create pivot grill for float
 
             grill_entropy = []
 
@@ -72,11 +71,11 @@ class Leaf:
                 n_left = sum(left_split)
                 n_right = total - n_left
 
-                if n_left < 3 or n_right < 3:  # low data to split # TODO: use a parameter instead of hardcoded number
+                if n_left < self.root.min_child_per_leaf or n_right < self.root.min_child_per_leaf:  # low data to split
                     l_entropy = 0.5
                     r_entropy = 0.5
                 else:
-                    r_entropy = 1  # TODO: Review this hardcoded number
+                    r_entropy = 1
                     l_entropy = 1
 
                     for clas in classes:
@@ -90,7 +89,7 @@ class Leaf:
             pivot = grill[grill_entropy.index(min(grill_entropy))]  # best pivot
             criteria = split_column < pivot  # builds the next mask
             left_count = sum(np.logical_and(criteria, self.partition))
-            if left_count < 3 or total-left_count < 3:  # low data to split
+            if left_count < self.root.min_child_per_leaf or total-left_count < self.root.min_child_per_leaf:  # low data to split
                 return None, None
 
             return criteria, pivot  # return mask and pivot
