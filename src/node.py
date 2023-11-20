@@ -1,5 +1,6 @@
 from random import randrange
 from numpy.random import normal
+from numpy import logical_and, select
 
 
 class Node:
@@ -21,10 +22,15 @@ class Node:
         self.right.set_leaf_tag()
         self.left.set_leaf_tag()
 
-    def evaluate(self, row):
-        if row[[self.column]] < self.pivot:
-            return self.left.evaluate(row)
-        return self.right.evaluate(row)
+    def evaluate(self, tree, criteria):
+        left_split = (tree.genetree.data[[self.column]] < self.pivot).squeeze()
+        right_split = logical_and(criteria, ~left_split)
+        left_split = logical_and(criteria, left_split)
+
+        condlist = [left_split, right_split]
+        condchoice = [self.left.evaluate(tree, left_split), self.right.evaluate(tree, right_split)]
+
+        return select(condlist, condchoice, '')
 
     def plot(self):
         print('---- Column ' + self.column + ' < ' + str(self.pivot) + ' ----')

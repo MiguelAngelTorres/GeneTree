@@ -1,6 +1,7 @@
 from src.tree import Tree
 import sys
 import pandas as pd
+from src.utils import accuracy
 
 
 class Genetree:
@@ -12,10 +13,12 @@ class Genetree:
     min_child_per_leaf = None
     num_tree = None
 
+    score_function = None
+
     features = None         # Features
     n_features = None       # Number of features
 
-    def __init__(self, data, label, num_tree=100, deepness=0, min_child_per_leaf=3):
+    def __init__(self, data, label, num_tree=100, deepness=0, min_child_per_leaf=3, score_function='accuracy'):
 
         if not isinstance(data, pd.DataFrame):
             print('Exit with status 1 \n  Error while initialization Genetree - data must be a pandas.DataFrame')
@@ -38,9 +41,14 @@ class Genetree:
         if min_child_per_leaf <= 0:
             print('Exit with status 1 \n  Error while initialization Genetree - min_child_per_leaf must be greater than 0')
             sys.exit(1)
+        available_score_functions = ['accuracy']
+        if score_function not in available_score_functions:
+            print('Exit with status 1 \n  Error while initialization Genetree - score_function must be on of ' + str(available_score_functions))
+            sys.exit(1)
 
         self.label = label.squeeze()
         self.data = data
+        self.score_function = score_function
         self.features = list(data.columns)
         self.n_features = len(self.features)
         if deepness == 0:
@@ -54,4 +62,25 @@ class Genetree:
         for i in range(1, num_tree):
             tree = Tree(self)
             self.tree_population.append(tree)
+
+    def score_trees(self):
+        tree_score = []
+        if self.score_function == 'accuracy':  # TODO: accuracy works with labels, auc needs probabilities. Think how to include that (idea: save the proportion of train data at each leaf)
+            for tree in self.tree_population:
+                tree_score.append(accuracy(self.label, tree.evaluate(self.data)))
+
+        return tree_score
+
+    def calculate_reproductivity_score(self):
+        tree_score = self.score_trees()
+        reproductivity_score = pd.DataFrame({'tree': self.tree_population, 'score': tree_score})
+        reproductivity_score = reproductivity_score.sort_values(by=['score'], ascending=False)
+
+        # transform score to probabilities (interval [0,1])
+        reproductivity_score['score'] -= reproductivity_score['score'].min()
+        sum_score_inv = 1 / reproductivity_score['score'].sum()
+        reproductivity_score['score'] *= sum_score_inv
+        reproductivity_score['score'] = reproductivity_score['score'].cumsum()
+
+        return reproductivity_score
 

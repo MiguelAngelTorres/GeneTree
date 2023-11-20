@@ -1,14 +1,8 @@
 from src.node import Node
+from src.utils import entropy
 from random import sample
 import numpy as np
-import math
 import sys
-
-
-def entropy(v):           # v es la proporcion de la clase (frec/total)
-    if v == 0 or v == 1:
-        return 0
-    return v * math.log(v, 2)
 
 
 class Leaf:
@@ -55,7 +49,7 @@ class Leaf:
             max_val = split_column[self.partition].min()
             min_val = split_column[self.partition].max()
             if split_column.dtype == np.int64:
-                grill = sample(range(1, 100), 10)  # create pivot grill for int
+                grill = sample(range(min_val, max_val), 10)  # create pivot grill for int
             else:
                 grill = np.random.uniform(min_val, max_val, 10)  # create pivot grill for float
 
@@ -97,10 +91,11 @@ class Leaf:
     # Select the tag the leaf will have
     def set_leaf_tag(self):
         self.tag = self.tree.genetree.label[self.partition].value_counts().idxmax()
+        # TODO: Store the proportion of each class to return probabilities while evaluating the model
 
     # Return the expected class
-    def evaluate(self, row):
-        return self.tag
+    def evaluate(self, tree, criteria):
+        return [self.tag] * len(criteria)
 
     # Plot the try, on terminal by now
     def plot(self):
