@@ -22,15 +22,18 @@ class Node:
         self.right.set_leaf_tag()
         self.left.set_leaf_tag()
 
-    def evaluate(self, tree, criteria):
-        left_split = (tree.genetree.data[[self.column]] < self.pivot).squeeze()
-        right_split = logical_and(criteria, ~left_split)
-        left_split = logical_and(criteria, left_split)
+    def evaluate(self, tree, criteria, probability=False):
+        if probability:
+            return None
+        else:
+            left_split = (tree.genetree.data[[self.column]] < self.pivot).squeeze()
+            right_split = logical_and(criteria, ~left_split)
+            left_split = logical_and(criteria, left_split)
 
-        condlist = [left_split, right_split]
-        condchoice = [self.left.evaluate(tree, left_split), self.right.evaluate(tree, right_split)]
+            condlist = [left_split, right_split]
+            condchoice = [self.left.evaluate(tree, left_split, probability), self.right.evaluate(tree, right_split, probability)]
 
-        return select(condlist, condchoice, '')
+            return select(condlist, condchoice, '')
 
     def plot(self):
         print('---- Column ' + self.column + ' < ' + str(self.pivot) + ' ----')

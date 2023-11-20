@@ -94,8 +94,11 @@ class Leaf:
         # TODO: Store the proportion of each class to return probabilities while evaluating the model
 
     # Return the expected class
-    def evaluate(self, tree, criteria):
-        return [self.tag] * len(criteria)
+    def evaluate(self, tree, criteria, probability=False):
+        if probability:
+            return None
+        else:
+            return [self.tag] * len(criteria)
 
     # Plot the try, on terminal by now
     def plot(self):

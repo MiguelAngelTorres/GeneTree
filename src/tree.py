@@ -15,8 +15,11 @@ class Tree:
         self.root = self.root.warm(self.genetree.deepness)
         self.root.set_leaf_tag()
 
-    def evaluate(self, data):
-        return self.root.evaluate(self, [True] * data.shape[0])
+    def evaluate(self, data, probability=False):
+        if probability:
+            return None
+        else:
+            return self.root.evaluate(self, [True] * data.shape[0], probability)
 
     def select_random_branch(self):
         r = randrange(5)
