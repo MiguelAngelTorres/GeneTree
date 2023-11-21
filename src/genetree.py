@@ -8,6 +8,7 @@ class Genetree:
     tree_population = None  # Tree array with population
     data = None             # Train data
     label = None            # Train target
+    possible_labels = None  # Unique value's label
 
     deepness = None
     min_child_per_leaf = None
@@ -47,6 +48,7 @@ class Genetree:
             sys.exit(1)
 
         self.label = label.squeeze()
+        self.possible_labels = self.label.unique()
         self.data = data
         self.score_function = score_function
         self.features = list(data.columns)
@@ -65,7 +67,7 @@ class Genetree:
 
     def score_trees(self):
         tree_score = []
-        if self.score_function == 'accuracy':  # TODO: accuracy works with labels, auc needs probabilities. Think how to include that (idea: save the proportion of train data at each leaf)
+        if self.score_function == 'accuracy':
             for tree in self.tree_population:
                 tree_score.append(accuracy(self.label, tree.evaluate(self.data)))
 

@@ -7,7 +7,7 @@ import sys
 
 class Leaf:
     tree = None 			# Tree
-    tag = None 				# Decision to take
+    tags_count = None       # Counter of tags for train data
     partition = None		# Boolean vector that mask the initial data belonging to the leaf
 
     def __init__(self, tree, partition):
@@ -90,19 +90,21 @@ class Leaf:
 
     # Select the tag the leaf will have
     def set_leaf_tag(self):
-        self.tag = self.tree.genetree.label[self.partition].value_counts().idxmax()
-        # TODO: Store the proportion of each class to return probabilities while evaluating the model
+        value_counts = self.tree.genetree.label[self.partition].value_counts()
+        self.tags_count = dict([[label,value_counts[label]] if label in value_counts.index else [label,0] for label in self.tree.genetree.possible_labels])
 
-    # Return the expected class
+# Return the expected class
     def evaluate(self, tree, criteria, probability=False):
         if probability:
-            return None
+            total = sum(self.tags_count.values(), 0.0)
+            probability_dict = {k: v / total for k, v in self.tags_count.items()}
+            return probability_dict
         else:
-            return [self.tag] * len(criteria)
+            return [max(self.tags_count, key=self.tags_count.get)] * len(criteria)
 
     # Plot the try, on terminal by now
     def plot(self):
-        print(str(self.tag) + ' with ' + str(sum(self.partition)) + ' observations')
+        print(self.tags_count)
         return None
 
     # The selection arrived to a leaf, so return the parent of that leaf

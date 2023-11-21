@@ -11,3 +11,5 @@ end = time.time()
 print("\nMean time elapsed on warm: " + str(end-start))
 
 genetree.calculate_reproductivity_score()
+
+print(genetree.tree_population[0].evaluate(data, True))
