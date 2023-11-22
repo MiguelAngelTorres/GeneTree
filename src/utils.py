@@ -1,5 +1,6 @@
 from math import log
-from sklearn.metrics import accuracy_score
+from sklearn.metrics import accuracy_score, roc_auc_score
+
 
 def entropy(v):           # v es la proporcion de la clase (frec/total)
     if v == 0 or v == 1:
@@ -9,3 +10,7 @@ def entropy(v):           # v es la proporcion de la clase (frec/total)
 
 def accuracy(y_true, y_pred):
     return accuracy_score(y_true, y_pred)
+
+
+def auc(y_true, proba_pred):
+    return roc_auc_score(y_true, proba_pred)

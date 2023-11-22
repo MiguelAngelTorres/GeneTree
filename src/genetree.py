@@ -1,14 +1,15 @@
 from src.tree import Tree
 import sys
 import pandas as pd
-from src.utils import accuracy
+from src.utils import accuracy, auc
+from sklearn.preprocessing import LabelBinarizer
 
 
 class Genetree:
     tree_population = None  # Tree array with population
     data = None             # Train data
     label = None            # Train target
-    possible_labels = None  # Unique value's label
+    label_binarizer = None
 
     deepness = None
     min_child_per_leaf = None
@@ -42,13 +43,14 @@ class Genetree:
         if min_child_per_leaf <= 0:
             print('Exit with status 1 \n  Error while initialization Genetree - min_child_per_leaf must be greater than 0')
             sys.exit(1)
-        available_score_functions = ['accuracy']
+        available_score_functions = ['accuracy', 'auc']
         if score_function not in available_score_functions:
             print('Exit with status 1 \n  Error while initialization Genetree - score_function must be on of ' + str(available_score_functions))
             sys.exit(1)
 
         self.label = label.squeeze()
-        self.possible_labels = self.label.unique()
+        self.label_binarizer = LabelBinarizer()
+        self.label_binarizer.fit(self.label)
         self.data = data
         self.score_function = score_function
         self.features = list(data.columns)
@@ -70,6 +72,9 @@ class Genetree:
         if self.score_function == 'accuracy':
             for tree in self.tree_population:
                 tree_score.append(accuracy(self.label, tree.evaluate(self.data)))
+        elif self.score_function == 'auc':
+            for tree in self.tree_population:
+                tree_score.append(auc(self.label_binarizer.fit_transform(self.label), tree.evaluate(self.data, probability=True)))
 
         return tree_score
 

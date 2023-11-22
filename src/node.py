@@ -1,6 +1,6 @@
 from random import randrange
 from numpy.random import normal
-from numpy import logical_and, select
+from numpy import logical_and, where
 
 
 class Node:
@@ -27,10 +27,9 @@ class Node:
         right_split = logical_and(criteria, ~left_split)
         left_split = logical_and(criteria, left_split)
 
-        condlist = [left_split, right_split]
-        condchoice = [self.left.evaluate(tree, left_split, probability), self.right.evaluate(tree, right_split, probability)]
+        left_split_fix = [[x] * len(self.tree.genetree.label_binarizer.classes_) for x in left_split]
 
-        return select(condlist, condchoice, '')
+        return where(left_split_fix, self.left.evaluate(tree, left_split, probability), self.right.evaluate(tree, right_split, probability))
 
     def plot(self):
         print('---- Column ' + self.column + ' < ' + str(self.pivot) + ' ----')

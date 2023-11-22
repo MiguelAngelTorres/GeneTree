@@ -2,6 +2,7 @@ from src.node import Node
 from src.utils import entropy
 from random import sample
 import numpy as np
+import pandas as pd
 import sys
 
 
@@ -26,8 +27,8 @@ class Leaf:
         for column in shuffle_columns:
             (criteria, pivot) = self.select_pivot(column)
             if criteria is not None:  # If good split
-                right = Leaf(self.tree, criteria & self.partition)
-                left = Leaf(self.tree, ~criteria & self.partition)
+                left = Leaf(self.tree, criteria & self.partition)
+                right = Leaf(self.tree, ~criteria & self.partition)
 
                 if levels > 1:
                     right = right.warm(levels-1)
@@ -91,16 +92,16 @@ class Leaf:
     # Select the tag the leaf will have
     def set_leaf_tag(self):
         value_counts = self.tree.genetree.label[self.partition].value_counts()
-        self.tags_count = dict([[label,value_counts[label]] if label in value_counts.index else [label,0] for label in self.tree.genetree.possible_labels])
+        self.tags_count = [value_counts[label] if label in value_counts.index else 0 for label in self.tree.genetree.label_binarizer.classes_]
 
 # Return the expected class
     def evaluate(self, tree, criteria, probability=False):
         if probability:
-            total = sum(self.tags_count.values(), 0.0)
-            probability_dict = {k: v / total for k, v in self.tags_count.items()}
-            return probability_dict
+            total = sum(self.tags_count)
+            probabilities = [[v / total for v in self.tags_count]] * len(criteria)
+            return probabilities
         else:
-            return [max(self.tags_count, key=self.tags_count.get)] * len(criteria)
+            return self.tree.genetree.label_binarizer.classes_[pd.Series(self.tags_count).idxmax()] * len(criteria)
 
     # Plot the try, on terminal by now
     def plot(self):
