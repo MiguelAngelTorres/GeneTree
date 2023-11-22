@@ -1,7 +1,13 @@
-import tree
+from src.genetree import Genetree
 import pandas as pd
+import time
+
 
 data = pd.read_csv("iris-species/Iris.csv")
-tree = tree.Genetreec(data[['SepalLengthCm', 'SepalWidthCm', 'PetalLengthCm', 'PetalWidthCm']], data[['Species']])
-tree.warm()
-tree.root.plot()
+
+start = time.time()
+genetree = Genetree(data[['SepalLengthCm', 'SepalWidthCm', 'PetalLengthCm', 'PetalWidthCm']], data[['Species']], score_function="auc")
+end = time.time()
+print("\nMean time elapsed on warm: " + str(end-start))
+
+print(genetree.calculate_reproductivity_score())
