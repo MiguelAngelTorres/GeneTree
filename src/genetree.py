@@ -3,6 +3,7 @@ import sys
 import pandas as pd
 from src.utils import accuracy, auc
 from sklearn.preprocessing import LabelBinarizer
+import numpy as np
 
 
 class Genetree:
@@ -67,6 +68,10 @@ class Genetree:
             tree = Tree(self)
             self.tree_population.append(tree)
 
+        print(np.mean(self.score_trees()))
+        self.tree_population = self.next_generation()
+        print(np.mean(self.score_trees()))
+
     def score_trees(self):
         tree_score = []
         if self.score_function == 'accuracy':
@@ -88,6 +93,63 @@ class Genetree:
         sum_score_inv = 1 / reproductivity_score['score'].sum()
         reproductivity_score['score'] *= sum_score_inv
         reproductivity_score['score'] = reproductivity_score['score'].cumsum()
+        reproductivity_score['score'] = 1 - reproductivity_score['score']
 
         return reproductivity_score
 
+    def next_generation(self):
+        reproductivity_score = self.calculate_reproductivity_score().sort_values(by=['score'], ascending=False)
+        probs = np.random.uniform(0, 1, self.num_tree * 2)
+
+        next_generation = []
+        for i in range(0, self.num_tree):
+            a_tree = reproductivity_score.loc[reproductivity_score.score <= probs[i]].iloc[0].tree
+            b_tree = reproductivity_score.loc[reproductivity_score.score <= probs[self.num_tree + i]].iloc[0].tree
+
+            atree, btree = self.crossover(a_tree, b_tree)
+            next_generation.append(atree)
+            next_generation.append(btree)
+
+        return next_generation
+
+    @staticmethod
+    def crossover(a_tree, b_tree):
+        aside, abranch = a_tree.select_random_branch()
+        bside, bbranch = b_tree.select_random_branch()
+
+        auxbranch = None
+        if aside == "left":
+            auxbranch = abranch.left
+            if bside == "left":
+                abranch.left = bbranch.left
+                bbranch.left = auxbranch
+            elif bside == "right":
+                abranch.left = bbranch.right
+                bbranch.right = auxbranch
+            else:
+                abranch.left = bbranch.root
+                bbranch.root = auxbranch
+        elif aside == "right":
+            auxbranch = abranch.right
+            if bside == "left":
+                abranch.right = bbranch.left
+                bbranch.left = auxbranch
+            elif bside == "right":
+                abranch.right = bbranch.right
+                bbranch.right = auxbranch
+            else:
+                abranch.right = bbranch.root
+                bbranch.root = auxbranch
+        else:
+            auxbranch = abranch.root
+            if bside == "left":
+                abranch.root = bbranch.left
+                bbranch.left = auxbranch
+            elif bside == "right":
+                abranch.root = bbranch.right
+                bbranch.right = auxbranch
+            else:
+                abranch.root = bbranch.root
+                bbranch.root = auxbranch
+
+        return a_tree, b_tree
