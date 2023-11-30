@@ -1,7 +1,8 @@
 from src.node import Node
 from src.utils import entropy
 from random import sample
-import numpy as np
+from numpy import logical_and, int64, float64
+from numpy.random import uniform
 import pandas as pd
 import sys
 
@@ -27,8 +28,8 @@ class Leaf:
         for column in shuffle_columns:
             (criteria, pivot) = self.select_pivot(column)
             if criteria is not None:  # If good split
-                left = Leaf(self.tree, criteria & self.partition)
-                right = Leaf(self.tree, ~criteria & self.partition)
+                left = Leaf(self.tree, logical_and(criteria,self.partition))
+                right = Leaf(self.tree, logical_and(~criteria, self.partition))
 
                 if levels > 1:
                     right = right.warm(levels-1)
@@ -46,13 +47,13 @@ class Leaf:
     # Look for the pivot with best split, depending of the generated entropy
     def select_pivot(self, column):
         split_column = self.tree.genetree.data[column].to_numpy()
-        if split_column.dtype == np.float64 or split_column.dtype == np.int64:
+        if split_column.dtype == float64 or split_column.dtype == int64:
             max_val = split_column[self.partition].min()
             min_val = split_column[self.partition].max()
-            if split_column.dtype == np.int64:
+            if split_column.dtype == int64:
                 grill = sample(range(min_val, max_val), 10)  # create pivot grill for int
             else:
-                grill = np.random.uniform(min_val, max_val, 10)  # create pivot grill for float
+                grill = uniform(min_val, max_val, 10)  # create pivot grill for float
 
             grill_entropy = []
 
@@ -61,8 +62,8 @@ class Leaf:
             classes = list(dict.fromkeys(self.tree.genetree.label.unique()))
             for x in grill:
                 left_split = split_column < x
-                right_split = np.logical_and(~left_split, self.partition)
-                left_split = np.logical_and(left_split, self.partition)
+                right_split = logical_and(~left_split, self.partition)
+                left_split = logical_and(left_split, self.partition)
                 n_left = sum(left_split)
                 n_right = total - n_left
 
@@ -83,7 +84,7 @@ class Leaf:
 
             pivot = grill[grill_entropy.index(min(grill_entropy))]  # best pivot
             criteria = split_column < pivot  # builds the next mask
-            left_count = sum(np.logical_and(criteria, self.partition))
+            left_count = sum(logical_and(criteria, self.partition))
             if left_count < self.tree.genetree.min_child_per_leaf or total-left_count < self.tree.genetree.min_child_per_leaf:  # low data to split
                 return None, None
 
@@ -96,12 +97,18 @@ class Leaf:
 
 # Return the expected class
     def evaluate(self, tree, criteria, probability=False):
+        total = sum(self.tags_count)   # If total is 0, then the leaf has no train data
         if probability:
-            total = sum(self.tags_count)
-            probabilities = [[v / total for v in self.tags_count]] * len(criteria)
+            if total != 0:
+                probabilities = [[v / total for v in self.tags_count]] * len(criteria)
+            else:    # give frequency of tag in train data
+                probabilities = [[v / len(criteria) for v in self.tree.genetree.tags_count]] * len(criteria)
             return probabilities
         else:
-            return self.tree.genetree.label_binarizer.classes_[pd.Series(self.tags_count).idxmax()] * len(criteria)
+            if total != 0:
+                return self.tree.genetree.label_binarizer.classes_[pd.Series(self.tags_count).idxmax()] * len(criteria)
+            else:    # give most frequent tag in train data
+                return self.tree.genetree.label_binarizer.classes_[pd.Series(self.tree.genetree.tags_count).idxmax()] * len(criteria)
 
     # Plot the try, on terminal by now
     def plot(self):

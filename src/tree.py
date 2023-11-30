@@ -8,7 +8,6 @@ class Tree:
 
     def __init__(self, genetree):
         self.genetree = genetree
-        self.warm()
 
     def warm(self):
         self.root = Leaf(self, [True] * self.genetree.data.shape[0])

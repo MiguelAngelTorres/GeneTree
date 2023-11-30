@@ -79,8 +79,8 @@ class Node:
         return
 
     def repartition(self, partition):
-        split_column = self.tree.data[self.column]
+        split_column = self.tree.genetree.data[self.column]
         criteria = split_column < self.pivot
-        self.right.repartition(criteria & partition)
-        self.left.repartition(criteria & partition)
+        self.left.repartition(logical_and(criteria, partition))
+        self.right.repartition(logical_and(~criteria, partition))
         return
