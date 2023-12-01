@@ -31,7 +31,7 @@ class Tree:
                 last_branch_father = self.root
         else:
             last_branch_side = "root"
-            last_branch_father = self
+            last_branch_father = self.root
 
         return last_branch_side, last_branch_father
 
