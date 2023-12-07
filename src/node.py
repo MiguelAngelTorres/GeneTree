@@ -40,7 +40,6 @@ class Node:
 
     def select_random_branch(self):
         r = randrange(3)
-        father = None
         if r == 0:  # Elegida rama izq
             side, father = self.left.select_random_branch()
             if isinstance(father, bool):

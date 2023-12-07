@@ -82,10 +82,6 @@ class Genetree:
         for i in range(0, num_rounds):
             print("ronda: " + str(i))
             self.tree_population = self.next_generation()
-        for tree in self.tree_population:
-            if tree.get_num_nodes() == 1:
-                print(tree)
-                tree.plot()
 
     def score_trees(self):
         tree_score = []
@@ -122,7 +118,6 @@ class Genetree:
             a_tree = reproductivity_score.loc[reproductivity_score.score <= probs[i]].iloc[0].tree
             b_tree = reproductivity_score.loc[reproductivity_score.score <= probs[self.num_trees + i]].iloc[0].tree
 
-            print("Dimensions: " + str(a_tree.get_num_nodes()) + ' - ' + str(b_tree.get_num_nodes()))
             atree = self.crossover(a_tree, b_tree)
             next_generation.append(atree)
 

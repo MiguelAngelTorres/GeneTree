@@ -22,12 +22,18 @@ class Tree:
         if r == 0 or r == 2:
             last_branch_side, last_branch_father = self.root.left.select_random_branch()
             if isinstance(last_branch_father, bool):  # Si el elegido es el hijo
-                last_branch_side = "left"
+                if last_branch_father:
+                    last_branch_side = "left"
+                else:
+                    last_branch_side = 'root'
                 last_branch_father = self.root
         elif r == 1 or r == 3:
             last_branch_side, last_branch_father = self.root.right.select_random_branch()
             if isinstance(last_branch_father, bool):  # Si el elegido es el hijo
-                last_branch_side = "right"
+                if last_branch_father:
+                    last_branch_side = "right"
+                else:
+                    last_branch_side = 'root'
                 last_branch_father = self.root
         else:
             last_branch_side = "root"
