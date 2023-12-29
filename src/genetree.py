@@ -110,7 +110,8 @@ class Genetree:
 
     def next_generation(self):
 
-        reproductivity_score = self.calculate_reproductivity_score().sort_values(by=['score'], ascending=False)
+        reproductivity_score = self.calculate_reproductivity_score()
+
         probs = np.random.uniform(0, 1, self.num_trees * 2)
 
         next_generation = []
