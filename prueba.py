@@ -12,7 +12,7 @@ end = time.time()
 print("\nMean time elapsed on warm: " + str(end-start))
 
 start = time.time()
-for i in range(1,10):
+for i in range(1,30):
     genetree.calculate_reproductivity_score()
 end = time.time()
 print("\nMean time elapsed on repro_score: " + str((end-start)/100))
