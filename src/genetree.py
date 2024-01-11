@@ -64,6 +64,7 @@ class Genetree:
         self.label = label.squeeze()
         self.label_binarizer = LabelBinarizer()
         self.label_binarizer.fit(self.label)
+        self.label_binarized = self.label_binarizer.fit_transform(self.label)
         value_counts = self.label.value_counts()
         self.tags_count = [value_counts[label] if label in value_counts.index else 0 for label in self.label_binarizer.classes_]
         self.data = pl.from_pandas(data)
@@ -82,7 +83,7 @@ class Genetree:
             self.tree_population.append(tree)
 
         for i in range(0, num_rounds):
-            print("ronda: " + str(i))
+            print("round: " + str(i))
             self.tree_population = self.next_generation()
 
     def score_trees(self):
@@ -92,7 +93,7 @@ class Genetree:
                 tree_score.append(accuracy(self.label, tree.evaluate(self.data)))
         elif self.score_function == 'auc':
             for tree in self.tree_population:
-                tree_score.append(auc(self.label_binarizer.fit_transform(self.label), tree.evaluate(self.data, probability=True)))
+                tree_score.append(auc(self.label_binarized, tree.evaluate(self.data, probability=True)))
 
         return tree_score
 
@@ -113,7 +114,6 @@ class Genetree:
     def next_generation(self):
 
         reproductivity_score = self.calculate_reproductivity_score()
-
         probs = np.random.uniform(0, 1, self.num_trees * 2)
 
         next_generation = []
@@ -136,7 +136,7 @@ class Genetree:
         copying_node = a_tree.root
         tree.root = self.copy_tree(tree, copying_node, abranch, bbranch, aside, bside)
 
-        tree.root.repartition([True] * self.data.shape[0])
+        tree.root.repartition(np.array([True] * self.data.shape[0]))
 
         return tree
 

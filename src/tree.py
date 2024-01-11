@@ -1,6 +1,6 @@
 from src.leaf import Leaf
 from random import randrange
-
+import numpy as np
 
 class Tree:
     genetree = None            # Parent object
@@ -15,7 +15,7 @@ class Tree:
         self.root.set_leaf_tag()
 
     def evaluate(self, data, probability=False):
-        return self.root.evaluate(self, [True] * data.shape[0], probability)
+        return self.root.evaluate(self, np.array([True] * data.shape[0]), probability)
 
     def select_random_branch(self):
         r = randrange(5)

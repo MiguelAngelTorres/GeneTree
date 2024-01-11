@@ -1,6 +1,6 @@
 from random import randrange
 from numpy.random import normal
-from numpy import logical_and, where
+from numpy import where
 import polars as pl
 
 
@@ -24,13 +24,11 @@ class Node:
         self.left.set_leaf_tag()
 
     def evaluate(self, tree, criteria, probability=False):
-        left_split = tree.genetree.data.select(aba=pl.col(self.column) < self.pivot).get_column("aba").to_numpy()
-        right_split = logical_and(criteria, ~left_split)
-        left_split = logical_and(criteria, left_split)
+        splits = tree.genetree.data.select(a=(pl.col(self.column) < self.pivot)).with_columns(b=(pl.col("a") & (criteria)),c=(~pl.col("a") & (criteria))).get_columns()
 
-        left_split_fix = [[x] * len(self.tree.genetree.label_binarizer.classes_) for x in left_split]
+        left_split_fix = [[x] * len(self.tree.genetree.label_binarizer.classes_) for x in splits[0]]
 
-        return where(left_split_fix, self.left.evaluate(tree, left_split, probability), self.right.evaluate(tree, right_split, probability))
+        return where(left_split_fix, self.left.evaluate(tree, splits[0], probability), self.right.evaluate(tree, splits[1], probability))
 
     def plot(self):
         print('---- Column ' + self.column + ' < ' + str(self.pivot) + ' ----')
@@ -79,7 +77,7 @@ class Node:
         return
 
     def repartition(self, partition):
-        criteria = self.tree.genetree.data.select(aba=(pl.col(self.column) < self.pivot)).get_column("aba").to_numpy()
-        self.left.repartition(logical_and(criteria, partition))
-        self.right.repartition(logical_and(~criteria, partition))
+        splits = self.tree.genetree.data.select(a=(pl.col(self.column) < self.pivot)).with_columns(b=(pl.col("a") & (partition)),c=(~pl.col("a") & (partition))).get_columns()
+        self.left.repartition(splits[0])
+        self.right.repartition(splits[1])
         return
