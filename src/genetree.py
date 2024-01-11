@@ -67,10 +67,11 @@ class Genetree:
         self.label_binarized = self.label_binarizer.fit_transform(self.label)
         value_counts = self.label.value_counts()
         self.tags_count = [value_counts[label] if label in value_counts.index else 0 for label in self.label_binarizer.classes_]
-        self.data = pl.from_pandas(data)
+        self.data = pl.from_pandas(data).lazy()
         self.score_function = score_function
         self.features = list(data.columns)
         self.n_features = len(self.features)
+        self.n_rows = data.shape[0]
         self.deepness = deepness
         self.min_child_per_leaf = min_child_per_leaf
         self.num_trees = num_trees
@@ -136,7 +137,7 @@ class Genetree:
         copying_node = a_tree.root
         tree.root = self.copy_tree(tree, copying_node, abranch, bbranch, aside, bside)
 
-        tree.root.repartition(np.array([True] * self.data.shape[0]))
+        tree.root.repartition(np.array([True] * self.n_rows))
 
         return tree
 

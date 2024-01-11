@@ -24,7 +24,7 @@ class Node:
         self.left.set_leaf_tag()
 
     def evaluate(self, tree, criteria, probability=False):
-        splits = tree.genetree.data.select(a=(pl.col(self.column) < self.pivot)).with_columns(b=(pl.col("a") & (criteria)),c=(~pl.col("a") & (criteria))).get_columns()
+        splits = tree.genetree.data.select(a=(pl.col(self.column) < self.pivot)).with_columns(b=(pl.col("a") & (criteria)),c=(~pl.col("a") & (criteria))).collect().get_columns()
 
         left_split_fix = [[x] * len(self.tree.genetree.label_binarizer.classes_) for x in splits[0]]
 
@@ -77,7 +77,7 @@ class Node:
         return
 
     def repartition(self, partition):
-        splits = self.tree.genetree.data.select(a=(pl.col(self.column) < self.pivot)).with_columns(b=(pl.col("a") & (partition)),c=(~pl.col("a") & (partition))).get_columns()
+        splits = self.tree.genetree.data.select(a=(pl.col(self.column) < self.pivot)).with_columns(b=(pl.col("a") & (partition)),c=(~pl.col("a") & (partition))).collect().get_columns()
         self.left.repartition(splits[0])
         self.right.repartition(splits[1])
         return

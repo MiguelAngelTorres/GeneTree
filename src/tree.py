@@ -10,12 +10,12 @@ class Tree:
         self.genetree = genetree
 
     def warm(self):
-        self.root = Leaf(self, [True] * self.genetree.data.shape[0])
+        self.root = Leaf(self, [True] * self.genetree.n_rows)
         self.root = self.root.warm(self.genetree.deepness)
         self.root.set_leaf_tag()
 
     def evaluate(self, data, probability=False):
-        return self.root.evaluate(self, np.array([True] * data.shape[0]), probability)
+        return self.root.evaluate(self, np.array([True] * data.collect().shape[0]), probability)
 
     def select_random_branch(self):
         r = randrange(5)
@@ -46,7 +46,7 @@ class Tree:
 
     def mutate(self):
         self.root.mutate()
-        self.root.repartition([True] * self.genetree.data.shape[0])
+        self.root.repartition([True] * self.genetree.n_rows)
         return
 
     def plot(self):

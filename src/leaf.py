@@ -46,7 +46,7 @@ class Leaf:
 
     # Look for the pivot with best split, depending of the generated entropy
     def select_pivot(self, column):
-        split_column = self.tree.genetree.data[column].to_numpy()
+        split_column = self.tree.genetree.data.collect()[column].to_numpy()
         if split_column.dtype == float64 or split_column.dtype == int64:
             max_val = split_column[self.partition].min()
             min_val = split_column[self.partition].max()
