@@ -98,7 +98,7 @@ class Genetree:
 
     def calculate_reproductivity_score(self):
         tree_score = self.score_trees()
-        reproductivity_score = pl.LazyFrame({'tree': self.tree_population, 'score': tree_score}, schema={"tree": pl.Object, "score": pl.Float64})
+        reproductivity_score = pl.LazyFrame({'tree': self.tree_population, 'score': tree_score})
 
         # transform score to probabilities (interval [0,1])
         reproductivity_score = reproductivity_score \
