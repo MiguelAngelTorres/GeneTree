@@ -1,6 +1,7 @@
 from random import randrange
 from numpy.random import normal
 from numpy import logical_and, where
+import polars as pl
 
 
 class Node:
@@ -23,7 +24,7 @@ class Node:
         self.left.set_leaf_tag()
 
     def evaluate(self, tree, criteria, probability=False):
-        left_split = (tree.genetree.data[[self.column]] < self.pivot).squeeze()
+        left_split = tree.genetree.data.select(aba=pl.col(self.column) < self.pivot).get_column("aba").to_numpy()
         right_split = logical_and(criteria, ~left_split)
         left_split = logical_and(criteria, left_split)
 
@@ -78,8 +79,7 @@ class Node:
         return
 
     def repartition(self, partition):
-        split_column = self.tree.genetree.data[self.column]
-        criteria = split_column < self.pivot
+        criteria = self.tree.genetree.data.select(aba=(pl.col(self.column) < self.pivot)).get_column("aba").to_numpy()
         self.left.repartition(logical_and(criteria, partition))
         self.right.repartition(logical_and(~criteria, partition))
         return
