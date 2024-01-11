@@ -7,6 +7,7 @@ from src.utils import accuracy, auc
 from sklearn.preprocessing import LabelBinarizer
 import numpy as np
 import polars as pl
+from polars import col
 
 
 class Genetree:
@@ -97,13 +98,18 @@ class Genetree:
 
     def calculate_reproductivity_score(self):
         tree_score = self.score_trees()
-        reproductivity_score = pl.DataFrame({'tree': self.tree_population, 'score': tree_score})
+        reproductivity_score = pl.LazyFrame({'tree': self.tree_population, 'score': tree_score}, schema={"tree": pl.Object, "score": pl.Float64})
+
+        # pl.DataFrame({'tree': self.tree_population, 'score': tree_score})
+
         reproductivity_score = reproductivity_score.sort('score', descending=True)
 
         # transform score to probabilities (interval [0,1])
-        reproductivity_score = reproductivity_score.with_columns((pl.col('score') - pl.min('score')).alias('score'))
-        reproductivity_score = reproductivity_score.with_columns((pl.col('score')/pl.sum('score')).alias('score'))
-        reproductivity_score = reproductivity_score.with_columns(1-(pl.cum_sum('score')).alias('score'))
+        reproductivity_score = reproductivity_score \
+            .with_columns((col('score') - pl.min('score')).alias("score0")) \
+            .with_columns((col("score0") / pl.sum('score0')).alias('score1')) \
+            .with_columns((1 - pl.cum_sum('score1')).alias('score_order')) \
+            .select(["tree", "score_order"])
 
         return reproductivity_score
 
@@ -115,8 +121,8 @@ class Genetree:
 
         next_generation = []
         for i in range(0, self.num_trees):
-            a_tree = reproductivity_score.filter(pl.col('score') <= probs[i]).get_column('tree')[0]
-            b_tree = reproductivity_score.filter(pl.col('score') <= probs[self.num_trees + i]).get_column('tree')[0]
+            a_tree = reproductivity_score.filter(pl.col('score_order') <= probs[i]).head(1).collect().get_column('tree')[0]
+            b_tree = reproductivity_score.filter(pl.col('score_order') <= probs[self.num_trees + i]).head(1).collect().get_column('tree')[0]
 
             atree = self.crossover(a_tree, b_tree)
             next_generation.append(atree)
