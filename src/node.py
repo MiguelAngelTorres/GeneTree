@@ -1,6 +1,7 @@
 from random import randrange
 from numpy.random import normal
-from numpy import logical_and, where
+from numpy import where
+import polars as pl
 
 
 class Node:
@@ -23,13 +24,11 @@ class Node:
         self.left.set_leaf_tag()
 
     def evaluate(self, tree, criteria, probability=False):
-        left_split = (tree.genetree.data[[self.column]] < self.pivot).squeeze()
-        right_split = logical_and(criteria, ~left_split)
-        left_split = logical_and(criteria, left_split)
+        splits = tree.genetree.data.select(a=(pl.col(self.column) < self.pivot)).with_columns(b=(pl.col("a") & (criteria)),c=(~pl.col("a") & (criteria))).collect().get_columns()
 
-        left_split_fix = [[x] * len(self.tree.genetree.label_binarizer.classes_) for x in left_split]
+        left_split_fix = [[x] * len(self.tree.genetree.label_binarizer.classes_) for x in splits[0]]
 
-        return where(left_split_fix, self.left.evaluate(tree, left_split, probability), self.right.evaluate(tree, right_split, probability))
+        return where(left_split_fix, self.left.evaluate(tree, splits[0], probability), self.right.evaluate(tree, splits[1], probability))
 
     def plot(self):
         print('---- Column ' + self.column + ' < ' + str(self.pivot) + ' ----')
@@ -40,7 +39,6 @@ class Node:
 
     def select_random_branch(self):
         r = randrange(3)
-        father = None
         if r == 0:  # Elegida rama izq
             side, father = self.left.select_random_branch()
             if isinstance(father, bool):
@@ -79,8 +77,7 @@ class Node:
         return
 
     def repartition(self, partition):
-        split_column = self.tree.data[self.column]
-        criteria = split_column < self.pivot
-        self.right.repartition(criteria & partition)
-        self.left.repartition(criteria & partition)
+        splits = self.tree.genetree.data.select(a=(pl.col(self.column) < self.pivot)).with_columns(b=(pl.col("a") & (partition)),c=(~pl.col("a") & (partition))).collect().get_columns()
+        self.left.repartition(splits[0])
+        self.right.repartition(splits[1])
         return
