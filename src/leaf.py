@@ -4,6 +4,7 @@ from random import sample
 from numpy import logical_and, int64, float64
 from numpy.random import uniform
 import pandas as pd
+import polars as pl
 import sys
 
 
@@ -46,12 +47,17 @@ class Leaf:
 
     # Look for the pivot with best split, depending of the generated entropy
     def select_pivot(self, column):
-        split_column = self.tree.genetree.data[column].to_numpy()
+        split_column = self.tree.genetree.data.select(pl.col(column)).collect().get_column(column).to_numpy()
         if split_column.dtype == float64 or split_column.dtype == int64:
-            max_val = split_column[self.partition].min()
-            min_val = split_column[self.partition].max()
+            splited_column = split_column[self.partition]
+            max_val = splited_column.max()
+            min_val = splited_column.min()
+
+            if min_val == max_val:
+                return None, None
+
             if split_column.dtype == int64:
-                grill = sample(range(min_val, max_val), 10)  # create pivot grill for int
+                grill = sample(range(min_val, max_val), min(10, max_val-min_val))  # create pivot grill for int
             else:
                 grill = uniform(min_val, max_val, 10)  # create pivot grill for float
 
