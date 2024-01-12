@@ -3,7 +3,7 @@ import pandas as pd
 import time
 
 
-data = pd.read_csv("iris-species/Iris.csv")
+data = pd.read_csv("data/Iris.csv")
 
 start = time.time()
 genetree = Genetree(data[['SepalLengthCm', 'SepalWidthCm', 'PetalLengthCm', 'PetalWidthCm']], data[['Species']],

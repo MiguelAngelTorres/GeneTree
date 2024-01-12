@@ -10,7 +10,7 @@ class Tree:
         self.genetree = genetree
 
     def warm(self):
-        self.root = Leaf(self, [True] * self.genetree.n_rows)
+        self.root = Leaf(self, np.array([True] * self.genetree.n_rows))
         self.root = self.root.warm(self.genetree.deepness)
         self.root.set_leaf_tag()
 
