@@ -94,7 +94,7 @@ class Genetree:
                 tree_score.append(accuracy(self.label, tree.evaluate(self.data)))
         elif self.score_function == 'auc':
             for tree in self.tree_population:
-                tree_score.append(auc(self.label_binarized, tree.evaluate(self.data, probability=True)))
+                tree_score.append(auc(self.label_binarized, tree.evaluate(self.data, probability=True), self.label_binarizer.classes_))
 
         return tree_score
 
@@ -116,7 +116,7 @@ class Genetree:
 
         reproductivity_score = self.calculate_reproductivity_score()
         probs = np.random.uniform(0, 1, self.num_trees * 2)
-
+        print(accuracy(self.label, reproductivity_score.head(1).collect().get_column('tree')[0].evaluate(self.data)))
         next_generation = []
         for i in range(0, self.num_trees):
             a_tree = reproductivity_score.filter(col('score_order') <= probs[i]).head(1).collect().get_column('tree')[0]
