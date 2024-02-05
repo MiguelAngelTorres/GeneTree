@@ -1,7 +1,8 @@
 from random import randrange
 from numpy.random import normal
-from numpy import where, asarray, putmask
+from numpy import where, asarray, putmask, repeat
 import polars as pl
+import time
 
 
 class Node:
@@ -26,20 +27,20 @@ class Node:
     def evaluate(self, tree, criteria, probability=False):
         splits = tree.genetree.data.select(a=(pl.col(self.column) < self.pivot)).with_columns(b=(pl.col("a") & (criteria)),c=((~pl.col("a")) & (criteria))).collect().get_columns()
 
-        left_split_fix = [[x] * len(self.tree.genetree.label_binarizer.classes_) for x in splits[0].to_numpy()]
+        split_left = splits[0].to_numpy()
+        split_right = splits[1].to_numpy()
 
-        left = self.left.evaluate(tree, splits[0].to_numpy(), probability)
-        right = self.right.evaluate(tree, splits[1].to_numpy(), probability)
+        left = self.left.evaluate(tree, split_left, probability)
+        right = self.right.evaluate(tree, split_right, probability)
 
         if probability:
             output_1 = asarray([left[0]] * len(criteria), dtype=object)
-            splits_left = asarray([[split] * len(self.tree.genetree.label_binarizer.classes_) for split in splits[0].to_numpy()])
-            splits_right = asarray([[split] * len(self.tree.genetree.label_binarizer.classes_) for split in splits[1].to_numpy()])
+            splits_left = asarray(repeat(split_left, len(self.tree.genetree.label_binarizer.classes_)).reshape(-1, len(self.tree.genetree.label_binarizer.classes_)))
+            splits_right = asarray(repeat(split_right, len(self.tree.genetree.label_binarizer.classes_)).reshape(-1, len(self.tree.genetree.label_binarizer.classes_)))
         else:
             output_1 = asarray([left[0]] * len(criteria), dtype=object)
-            splits_left = asarray(splits[0].to_numpy())
-            splits_right = asarray(splits[1].to_numpy())
-
+            splits_left = asarray(split_left)
+            splits_right = asarray(split_right)
 
         putmask(output_1, splits_left, left)
         putmask(output_1, splits_right, right)
@@ -93,7 +94,7 @@ class Node:
         return
 
     def repartition(self, partition):
-        splits = self.tree.genetree.data.select(a=(pl.col(self.column) < self.pivot)).with_columns(b=(pl.col("a") & (partition)),c=(~pl.col("a") & (partition))).collect().get_columns()
-        self.left.repartition(splits[0])
-        self.right.repartition(splits[1])
+        self.left.repartition(partition.with_columns(a=(pl.col(self.column) < self.pivot)).with_columns(b=(pl.col("a") & pl.col("b"))))
+        self.right.repartition(partition.with_columns(a=(pl.col(self.column) >= self.pivot)).with_columns(b=(pl.col("a") & pl.col("b"))))
+
         return

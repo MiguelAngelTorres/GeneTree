@@ -8,7 +8,7 @@ from sklearn.preprocessing import LabelBinarizer
 import numpy as np
 import polars as pl
 from polars import col
-
+import time
 
 class Genetree:
     tree_population = None  # Tree array with population
@@ -100,6 +100,7 @@ class Genetree:
 
     def calculate_reproductivity_score(self):
         tree_score = self.score_trees()
+
         if len(np.unique(tree_score)) > 1:
             reproductivity_score = pl.LazyFrame({'tree': self.tree_population, 'score': tree_score})
             # transform score to probabilities (interval [0,1])
@@ -117,8 +118,9 @@ class Genetree:
     def next_generation(self):
 
         reproductivity_score = self.calculate_reproductivity_score()
+
         probs = np.random.uniform(0, 1, self.num_trees * 2)
-        #print(accuracy(self.label, reproductivity_score.head(1).collect().get_column('tree')[0].evaluate(self.data)))
+
         next_generation = []
         for i in range(0, self.num_trees):
             a_tree = reproductivity_score.filter(col('score_order') <= probs[i]).head(1).collect().get_column('tree')[0]
@@ -126,7 +128,6 @@ class Genetree:
 
             atree = self.crossover(a_tree, b_tree)
             next_generation.append(atree)
-
             # TODO: Need a pruning method so the trees do not became bigger without limit - Add a parameter to control max deepness
 
         return next_generation
@@ -139,7 +140,7 @@ class Genetree:
         copying_node = a_tree.root
         tree.root = self.copy_tree(tree, copying_node, abranch, bbranch, aside, bside)
 
-        tree.root.repartition(np.array([True] * self.n_rows))
+        tree.root.repartition(self.data.with_columns(b=True))
 
         return tree
 

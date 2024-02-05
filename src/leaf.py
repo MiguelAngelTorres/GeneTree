@@ -132,6 +132,6 @@ class Leaf:
         return
 
     def repartition(self, partition):
-        self.partition = partition
+        self.partition = partition.collect().get_column('b').to_numpy()
         self.set_leaf_tag()
         return
