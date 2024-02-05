@@ -1,6 +1,6 @@
 from random import randrange
 from numpy.random import normal
-from numpy import where
+from numpy import where, asarray, putmask
 import polars as pl
 
 
@@ -24,11 +24,27 @@ class Node:
         self.left.set_leaf_tag()
 
     def evaluate(self, tree, criteria, probability=False):
-        splits = tree.genetree.data.select(a=(pl.col(self.column) < self.pivot)).with_columns(b=(pl.col("a") & (criteria)),c=(~pl.col("a") & (criteria))).collect().get_columns()
+        splits = tree.genetree.data.select(a=(pl.col(self.column) < self.pivot)).with_columns(b=(pl.col("a") & (criteria)),c=((~pl.col("a")) & (criteria))).collect().get_columns()
 
-        left_split_fix = [[x] * len(self.tree.genetree.label_binarizer.classes_) for x in splits[0]]
+        left_split_fix = [[x] * len(self.tree.genetree.label_binarizer.classes_) for x in splits[0].to_numpy()]
 
-        return where(left_split_fix, self.left.evaluate(tree, splits[0], probability), self.right.evaluate(tree, splits[1], probability))
+        left = self.left.evaluate(tree, splits[0].to_numpy(), probability)
+        right = self.right.evaluate(tree, splits[1].to_numpy(), probability)
+
+        if probability:
+            output_1 = asarray([left[0]] * len(criteria), dtype=object)
+            splits_left = asarray([[split] * len(self.tree.genetree.label_binarizer.classes_) for split in splits[0].to_numpy()])
+            splits_right = asarray([[split] * len(self.tree.genetree.label_binarizer.classes_) for split in splits[1].to_numpy()])
+        else:
+            output_1 = asarray([left[0]] * len(criteria), dtype=object)
+            splits_left = asarray(splits[0].to_numpy())
+            splits_right = asarray(splits[1].to_numpy())
+
+
+        putmask(output_1, splits_left, left)
+        putmask(output_1, splits_right, right)
+
+        return output_1
 
     def plot(self):
         print('---- Column ' + self.column + ' < ' + str(self.pivot) + ' ----')

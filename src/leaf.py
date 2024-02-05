@@ -112,9 +112,9 @@ class Leaf:
             return probabilities
         else:
             if total != 0:
-                return self.tree.genetree.label_binarizer.classes_[pd.Series(self.tags_count).idxmax()] * len(criteria)
+                return [self.tree.genetree.label_binarizer.classes_[pd.Series(self.tags_count).idxmax()]] * len(criteria)
             else:    # give most frequent tag in train data
-                return self.tree.genetree.label_binarizer.classes_[pd.Series(self.tree.genetree.tags_count).idxmax()] * len(criteria)
+                return [self.tree.genetree.label_binarizer.classes_[pd.Series(self.tree.genetree.tags_count).idxmax()]] * len(criteria)
 
     # Plot the try, on terminal by now
     def plot(self):

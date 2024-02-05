@@ -100,15 +100,17 @@ class Genetree:
 
     def calculate_reproductivity_score(self):
         tree_score = self.score_trees()
-        reproductivity_score = pl.LazyFrame({'tree': self.tree_population, 'score': tree_score})
-
-        # transform score to probabilities (interval [0,1])
-        reproductivity_score = reproductivity_score \
-            .sort('score', descending=True) \
-            .with_columns((col('score') - pl.min('score')).alias("score0")) \
-            .with_columns((col("score0") / pl.sum('score0')).alias('score1')) \
-            .with_columns((1 - pl.cum_sum('score1')).alias('score_order')) \
-            .select(["tree", "score_order"])
+        if len(np.unique(tree_score)) > 1:
+            reproductivity_score = pl.LazyFrame({'tree': self.tree_population, 'score': tree_score})
+            # transform score to probabilities (interval [0,1])
+            reproductivity_score = reproductivity_score \
+                .sort('score', descending=True) \
+                .with_columns((col('score') - pl.min('score')).alias("score0")) \
+                .with_columns((col("score0") / pl.sum('score0')).alias('score1')) \
+                .with_columns((1 - pl.cum_sum('score1')).alias('score_order')) \
+                .select(["tree", "score_order"])
+        else:
+            reproductivity_score = pl.LazyFrame({'tree': self.tree_population, 'score_order': [i/len(tree_score) for i in range(0,len(tree_score))]})
 
         return reproductivity_score
 
@@ -116,7 +118,7 @@ class Genetree:
 
         reproductivity_score = self.calculate_reproductivity_score()
         probs = np.random.uniform(0, 1, self.num_trees * 2)
-        print(accuracy(self.label, reproductivity_score.head(1).collect().get_column('tree')[0].evaluate(self.data)))
+        #print(accuracy(self.label, reproductivity_score.head(1).collect().get_column('tree')[0].evaluate(self.data)))
         next_generation = []
         for i in range(0, self.num_trees):
             a_tree = reproductivity_score.filter(col('score_order') <= probs[i]).head(1).collect().get_column('tree')[0]
