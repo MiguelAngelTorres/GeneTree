@@ -86,6 +86,7 @@ class Genetree:
         for i in range(0, num_rounds):
             print("round: " + str(i))
             self.tree_population = self.next_generation()
+            print("Nodos: %s" % self.tree_population[0].get_num_nodes())
 
     def score_trees(self):
         tree_score = []
