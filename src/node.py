@@ -1,8 +1,7 @@
 from random import randrange
 from numpy.random import normal
-from numpy import where, asarray, putmask, repeat
+from numpy import asarray, putmask, repeat
 import polars as pl
-import time
 
 
 class Node:
