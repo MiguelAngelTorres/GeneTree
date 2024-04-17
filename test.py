@@ -7,7 +7,7 @@ def small_test():
 
     start = time.time()
     genetree = Genetree(data[['SepalLengthCm','SepalWidthCm','PetalLengthCm','PetalWidthCm']], data[['Species']],
-                        score_function="auc", num_trees=10, deepness=4, num_rounds=10)
+                        score_function="auc", num_trees=30, deepness=4, num_rounds=10)
     end = time.time()
     print("\nMean time elapsed on warm: " + str(end-start))
 

@@ -7,13 +7,14 @@ import time
 
 class Node:
     tree = None       # Tree
+    depth = None      # Depth of nodes
     column = None     # Column name to split
     pivot = None      # Pivot to split data
 
     right = None      # Node or Leaf positive
     left = None       # Node or Leaf negative
 
-    def __init__(self, tree, column, pivot, right, left):
+    def __init__(self, tree, column, pivot, left, right):
         self.tree = tree
         self.column = column
         self.pivot = pivot
@@ -21,8 +22,8 @@ class Node:
         self.left = left
 
     def set_leaf_tag(self):
-        self.right.set_leaf_tag()
-        self.left.set_leaf_tag()
+        self.depth = max(self.right.set_leaf_tag(), self.left.set_leaf_tag()) + 1
+        return self.depth
 
     def evaluate(self, tree, criteria, probability=False):
         splits = tree.genetree.data.select(a=(pl.col(self.column) < self.pivot)).with_columns(b=(pl.col("a") & (criteria)),c=((~pl.col("a")) & (criteria))).collect().get_columns()
@@ -54,29 +55,34 @@ class Node:
         print('---- Column ' + self.column + ' >= ' + str(self.pivot) + ' ----')
         self.right.plot()
 
-    def select_random_branch(self):
-        r = randrange(3)
+    def select_random_branch(self, min_depth):
+        if min_depth < self.depth:
+            r = randrange(2)
+        else:
+            r = randrange(3)
+
         if r == 0:  # Elegida rama izq
-            side, father = self.left.select_random_branch()
+            side, father, branch_depth = self.left.select_random_branch(min_depth)
             if isinstance(father, bool):
                 if father: 		# If a son is the chosen one
-                    return "left", self
+                    return "left", self, branch_depth
                 else:					# If son is a leaf
-                    return None, True
-            return side, father				# If chosen one is deep
-        if r == 2:  # Elegida rama der
-            side, father = self.right.select_random_branch()
+                    return None, True, self.depth
+            return side, father, branch_depth				# If chosen one is deep
+        elif r == 1:  # Elegida rama der
+            side, father, branch_depth = self.right.select_random_branch(min_depth)
             if isinstance(father, bool):
                 if father: 		# If chosen one is a son
-                    return "right", self
+                    return "right", self, branch_depth
                 else:					# If son is a leaf
-                    return None, True
-            return side, father				# If chosen one is deep
-        if r == 1:
-            return None, True
+                    return None, True, self.depth
+            return side, father, branch_depth				# If chosen one is deep
+        else:
+            return None, True, self.depth
 
     def get_num_nodes(self):
         return self.left.get_num_nodes() + self.right.get_num_nodes() + 1
+
 
     # TODO
     def mutate(self):
@@ -94,7 +100,9 @@ class Node:
         return
 
     def repartition(self, partition):
-        self.left.repartition(partition.with_columns(a=(pl.col(self.column) < self.pivot)).with_columns(b=(pl.col("a") & pl.col("b"))))
-        self.right.repartition(partition.with_columns(a=(pl.col(self.column) >= self.pivot)).with_columns(b=(pl.col("a") & pl.col("b"))))
+        depth_left = self.left.repartition(partition.with_columns(a=(pl.col(self.column) < self.pivot)).with_columns(b=(pl.col("a") & pl.col("b"))))
+        depth_right = self.right.repartition(partition.with_columns(a=(pl.col(self.column) >= self.pivot)).with_columns(b=(pl.col("a") & pl.col("b"))))
 
-        return
+        self.depth = max(depth_left, depth_right) + 1
+        return self.depth
+
