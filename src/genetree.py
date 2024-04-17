@@ -8,24 +8,24 @@ from sklearn.preprocessing import LabelBinarizer
 import numpy as np
 import polars as pl
 from polars import col
-import time
+
 
 class Genetree:
     tree_population = None  # Tree array with population
     data = None             # Train data
     label = None            # Train target
-    label_binarizer = None
+    label_binarizer = None  # Auxiliar array with column target binarized
     tags_count = None       # Counter of tags for train data
 
-    deepness = None
-    min_child_per_leaf = None
-    num_trees = None
-    num_rounds = None
+    deepness = None             # Maximum number of consecutive nodes used to take a decision in a tree
+    min_child_per_leaf = None   # Minimum number of train rows to split a leaf
+    num_trees = None            # Number of trees in population
+    num_rounds = None           # Number of rounds in genetic algorithm
 
-    score_function = None
+    score_function = None       # Score function used to optimize the trees
 
-    features = None         # Features
-    n_features = None       # Number of features
+    features = None             # Features
+    n_features = None           # Number of features
 
     def __init__(self, data, label, num_trees=100, num_rounds=50, deepness=1, min_child_per_leaf=3, score_function='accuracy'):
 
@@ -83,8 +83,8 @@ class Genetree:
             tree.warm()
             self.tree_population.append(tree)
 
-        print("Max depth: %s" % max(self.tree_population, key=lambda x: x.depth).depth)
-        for i in range(0, num_rounds):
+    def train(self):
+        for i in range(0, self.num_rounds):
             print("round: " + str(i))
             self.tree_population = self.next_generation()
             print("Max depth: %s" % max(self.tree_population, key=lambda x: x.depth).depth)

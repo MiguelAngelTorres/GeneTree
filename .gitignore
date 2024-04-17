@@ -1,4 +1,7 @@
-/venv/*
+#IDE files
 .idea/*
+
+#Python enviroment files
+/venv/*
 __pycache__/*
 src/__pycache__/*

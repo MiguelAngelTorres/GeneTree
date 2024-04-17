@@ -7,7 +7,8 @@ def small_test():
 
     start = time.time()
     genetree = Genetree(data[['SepalLengthCm','SepalWidthCm','PetalLengthCm','PetalWidthCm']], data[['Species']],
-                        score_function="auc", num_trees=30, deepness=4, num_rounds=10)
+                        score_function="auc", num_trees=10, deepness=4, num_rounds=10)
+    genetree.train()
     end = time.time()
     print("\nMean time elapsed on warm: " + str(end-start))
 
@@ -18,7 +19,7 @@ def medium_test():
     start = time.time()
     genetree = Genetree(data[['age', 'fnlwgt', 'education_num', 'capital_gain', 'capital_loss', 'hours_per_week']], data[['ammount']],
                         score_function="accuracy", num_trees=10, deepness=4, num_rounds=10)
-
+    genetree.train()
     end = time.time()
     print("\nMean time elapsed on warm: " + str(end-start))
 
