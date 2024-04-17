@@ -84,10 +84,12 @@ class Genetree:
             self.tree_population.append(tree)
 
     def train(self):
+        print(sorted(self.score_trees(), reverse=True))
         for i in range(0, self.num_rounds):
             print("round: " + str(i))
             self.tree_population = self.next_generation()
             print("Max depth: %s" % max(self.tree_population, key=lambda x: x.depth).depth)
+            print(sorted(self.score_trees(), reverse=True))
 
     def score_trees(self):
         tree_score = []
@@ -130,15 +132,12 @@ class Genetree:
 
             atree = self.crossover(a_tree, b_tree)
             next_generation.append(atree)
-            # TODO: Need a pruning method so the trees do not became bigger without limit - Add a parameter to control max deepness
 
         return next_generation
 
     def crossover(self, a_tree, b_tree):
         aside, abranch, depth_abranch = a_tree.select_random_branch(self.deepness)
-        bside, bbranch, depth_bbranch = b_tree.select_random_branch(min_depth = self.deepness - (a_tree.depth - depth_abranch))
-
-        print("Profundidad arboles: ", depth_abranch,aside, depth_bbranch,bside)
+        bside, bbranch, depth_bbranch = b_tree.select_random_branch(self.deepness - (a_tree.depth - depth_abranch))
 
         tree = Tree(self)
         copying_node = a_tree.root
@@ -146,14 +145,6 @@ class Genetree:
 
         tree.repartition(self.data.with_columns(b=True))
 
-        if tree.depth > 5:
-            print(tree.depth)
-            print("arbol a----")
-            abranch.plot()
-            print("arbol b----")
-            bbranch.plot()
-            print("arbol res----") #TODO: Deepness increases, review why
-            tree.plot()
         return tree
 
     def copy_tree(self, tree, copying_node, abranch=None, bbranch=None, aside=None, bside=None):

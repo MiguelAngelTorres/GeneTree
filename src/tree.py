@@ -2,6 +2,7 @@ from src.leaf import Leaf
 from random import randrange
 import numpy as np
 
+
 class Tree:
     genetree = None            # Parent object
     root = None                # First Node
@@ -23,10 +24,18 @@ class Tree:
         return self.root.evaluate(self, np.array([True] * data.collect().shape[0]), probability)
 
     def select_random_branch(self, min_depth):
-        if min_depth < self.depth:
+        go_deep = min_depth < self.depth
+        if go_deep:
             r = randrange(2)
         else:
             r = randrange(3)
+
+        if r == 0:
+            if go_deep and isinstance(self.root.left, Leaf):
+                r = 1
+        if r == 1:
+            if go_deep and isinstance(self.root.right, Leaf):
+                r = 0
 
         if r == 0:
             last_branch_side, last_branch_father, depth_branch = self.root.left.select_random_branch(min_depth)

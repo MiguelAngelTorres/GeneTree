@@ -55,10 +55,18 @@ class Node:
         self.right.plot()
 
     def select_random_branch(self, min_depth):
-        if min_depth < self.depth:
+        go_deep = min_depth < self.depth
+        if go_deep:
             r = randrange(2)
         else:
             r = randrange(3)
+
+        if r == 0:
+            if go_deep and not isinstance(self.left, Node):
+                r = 1
+        if r == 1:
+            if go_deep and not isinstance(self.right, Node):
+                r = 0
 
         if r == 0:  # Elegida rama izq
             side, father, branch_depth = self.left.select_random_branch(min_depth)
