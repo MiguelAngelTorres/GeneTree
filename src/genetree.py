@@ -14,18 +14,18 @@ class Genetree:
     tree_population = None  # Tree array with population
     data = None             # Train data
     label = None            # Train target
-    label_binarizer = None
+    label_binarizer = None  # Auxiliar array with column target binarized
     tags_count = None       # Counter of tags for train data
 
-    deepness = None
-    min_child_per_leaf = None
-    num_trees = None
-    num_rounds = None
+    deepness = None             # Maximum number of consecutive nodes used to take a decision in a tree
+    min_child_per_leaf = None   # Minimum number of train rows to split a leaf
+    num_trees = None            # Number of trees in population
+    num_rounds = None           # Number of rounds in genetic algorithm
 
-    score_function = None
+    score_function = None       # Score function used to optimize the trees
 
-    features = None         # Features
-    n_features = None       # Number of features
+    features = None             # Features
+    n_features = None           # Number of features
 
     def __init__(self, data, label, num_trees=100, num_rounds=50, deepness=1, min_child_per_leaf=3, score_function='accuracy'):
 
@@ -83,9 +83,13 @@ class Genetree:
             tree.warm()
             self.tree_population.append(tree)
 
-        for i in range(0, num_rounds):
+    def train(self):
+        print(sorted(self.score_trees(), reverse=True))
+        for i in range(0, self.num_rounds):
             print("round: " + str(i))
             self.tree_population = self.next_generation()
+            print("Max depth: %s" % max(self.tree_population, key=lambda x: x.depth).depth)
+            print(sorted(self.score_trees(), reverse=True))
 
     def score_trees(self):
         tree_score = []
@@ -94,27 +98,31 @@ class Genetree:
                 tree_score.append(accuracy(self.label, tree.evaluate(self.data)))
         elif self.score_function == 'auc':
             for tree in self.tree_population:
-                tree_score.append(auc(self.label_binarized, tree.evaluate(self.data, probability=True)))
+                tree_score.append(auc(self.label_binarized, tree.evaluate(self.data, probability=True), self.label_binarizer.classes_))
 
         return tree_score
 
     def calculate_reproductivity_score(self):
         tree_score = self.score_trees()
-        reproductivity_score = pl.LazyFrame({'tree': self.tree_population, 'score': tree_score})
 
-        # transform score to probabilities (interval [0,1])
-        reproductivity_score = reproductivity_score \
-            .sort('score', descending=True) \
-            .with_columns((col('score') - pl.min('score')).alias("score0")) \
-            .with_columns((col("score0") / pl.sum('score0')).alias('score1')) \
-            .with_columns((1 - pl.cum_sum('score1')).alias('score_order')) \
-            .select(["tree", "score_order"])
+        if len(np.unique(tree_score)) > 1:
+            reproductivity_score = pl.LazyFrame({'tree': self.tree_population, 'score': tree_score})
+            # transform score to probabilities (interval [0,1])
+            reproductivity_score = reproductivity_score \
+                .sort('score', descending=True) \
+                .with_columns((col('score') - pl.min('score')).alias("score0")) \
+                .with_columns((col("score0") / pl.sum('score0')).alias('score1')) \
+                .with_columns((1 - pl.cum_sum('score1')).alias('score_order')) \
+                .select(["tree", "score_order"])
+        else:
+            reproductivity_score = pl.LazyFrame({'tree': self.tree_population, 'score_order': [i/len(tree_score) for i in range(0,len(tree_score))]})
 
         return reproductivity_score
 
     def next_generation(self):
 
         reproductivity_score = self.calculate_reproductivity_score()
+
         probs = np.random.uniform(0, 1, self.num_trees * 2)
 
         next_generation = []
@@ -125,19 +133,17 @@ class Genetree:
             atree = self.crossover(a_tree, b_tree)
             next_generation.append(atree)
 
-            # TODO: Need a pruning method so the trees do not became bigger without limit - Add a parameter to control max deepness
-
         return next_generation
 
     def crossover(self, a_tree, b_tree):
-        aside, abranch = a_tree.select_random_branch()
-        bside, bbranch = b_tree.select_random_branch()
+        aside, abranch, depth_abranch = a_tree.select_random_branch(self.deepness)
+        bside, bbranch, depth_bbranch = b_tree.select_random_branch(self.deepness - (a_tree.depth - depth_abranch))
 
         tree = Tree(self)
         copying_node = a_tree.root
         tree.root = self.copy_tree(tree, copying_node, abranch, bbranch, aside, bside)
 
-        tree.root.repartition(np.array([True] * self.n_rows))
+        tree.repartition(self.data.with_columns(b=True))
 
         return tree
 
@@ -149,66 +155,66 @@ class Genetree:
                         return Leaf(tree, None)
                     else:
                         return Node(tree, copying_node.column, copying_node.pivot,
-                                    self.copy_tree(tree, copying_node.right),
-                                    self.copy_tree(tree, bbranch.left))
+                                    self.copy_tree(tree, bbranch.left),
+                                    self.copy_tree(tree, copying_node.right))
                 elif bside == "right":
                     if isinstance(bbranch.right, Leaf):
                         return Leaf(tree, None)
                     else:
                         return Node(tree, copying_node.column, copying_node.pivot,
-                                    self.copy_tree(tree, copying_node.right),
-                                    self.copy_tree(tree, bbranch.right))
+                                    self.copy_tree(tree, bbranch.right),
+                                    self.copy_tree(tree, copying_node.right))
                 else:
                     return Node(tree, copying_node.column, copying_node.pivot,
-                                self.copy_tree(tree, copying_node.right),
-                                self.copy_tree(tree, bbranch))
+                                self.copy_tree(tree, bbranch),
+                                self.copy_tree(tree, copying_node.right))
             elif aside == "right":
                 if bside == "left":
                     if isinstance(bbranch.left, Leaf):
                         return Leaf(tree, None)
                     else:
                         return Node(tree, copying_node.column, copying_node.pivot,
-                                    self.copy_tree(tree, bbranch.left),
-                                    self.copy_tree(tree, copying_node.left))
+                                    self.copy_tree(tree, copying_node.left),
+                                    self.copy_tree(tree, bbranch.left))
                 elif bside == "right":
                     if isinstance(bbranch.right, Leaf):
                         return Leaf(tree, None)
                     else:
                         return Node(tree, copying_node.column, copying_node.pivot,
-                                    self.copy_tree(tree, bbranch.right),
-                                    self.copy_tree(tree, copying_node.left))
+                                    self.copy_tree(tree, copying_node.left),
+                                    self.copy_tree(tree, bbranch.right))
                 else:
                     return Node(tree, copying_node.column, copying_node.pivot,
-                                self.copy_tree(tree, bbranch),
-                                self.copy_tree(tree, copying_node.left))
+                                self.copy_tree(tree, copying_node.left),
+                                self.copy_tree(tree, bbranch))
 
             else:
                 if bside == "left":
                     if isinstance(bbranch.left, Leaf):
                         return Node(tree, bbranch.column, bbranch.pivot,
-                                    self.copy_tree(tree, bbranch.right),
-                                    self.copy_tree(tree, bbranch.left))
+                                    self.copy_tree(tree, bbranch.left),
+                                    self.copy_tree(tree, bbranch.right))
                     else:
                         return Node(tree, bbranch.left.column, bbranch.left.pivot,
-                                    self.copy_tree(tree, bbranch.left.right),
-                                    self.copy_tree(tree, bbranch.left.left))
+                                    self.copy_tree(tree, bbranch.left.left),
+                                    self.copy_tree(tree, bbranch.left.right))
                 elif bside == "right":
                     if isinstance(bbranch.right, Leaf):
                         return Node(tree, bbranch.column, bbranch.pivot,
-                                    self.copy_tree(tree, bbranch.right),
-                                    self.copy_tree(tree, bbranch.left))
+                                    self.copy_tree(tree, bbranch.left),
+                                    self.copy_tree(tree, bbranch.right))
                     else:
                         return Node(tree, bbranch.right.column, bbranch.right.pivot,
-                                    self.copy_tree(tree, bbranch.right.right),
-                                    self.copy_tree(tree, bbranch.right.left))
+                                    self.copy_tree(tree, bbranch.right.left),
+                                    self.copy_tree(tree, bbranch.right.right))
                 else:
                     return Node(tree, bbranch.column, bbranch.pivot,
-                                self.copy_tree(tree, bbranch.right),
-                                self.copy_tree(tree, bbranch.left))
+                                self.copy_tree(tree, bbranch.left),
+                                self.copy_tree(tree, bbranch.right))
         else:
             if isinstance(copying_node, Leaf):
                 return Leaf(tree, None)
             else:
                 return Node(tree, copying_node.column, copying_node.pivot,
-                            self.copy_tree(tree, copying_node.right, abranch, bbranch, aside, bside),
-                            self.copy_tree(tree, copying_node.left, abranch, bbranch, aside, bside))
+                            self.copy_tree(tree, copying_node.left, abranch, bbranch, aside, bside),
+                            self.copy_tree(tree, copying_node.right, abranch, bbranch, aside, bside))

@@ -12,6 +12,7 @@ class Leaf:
     tree = None 			# Tree
     tags_count = None       # Counter of tags for train data
     partition = None		# Boolean vector that mask the initial data belonging to the leaf
+    depth = 0               # Depth of nodes
 
     def __init__(self, tree, partition):
         self.tree = tree
@@ -50,10 +51,14 @@ class Leaf:
         split_column = self.tree.genetree.data.select(pl.col(column)).collect().get_column(column).to_numpy()
         if split_column.dtype == float64 or split_column.dtype == int64:
             splited_column = split_column[self.partition]
-            max_val = splited_column.min()
-            min_val = splited_column.max()
+            max_val = splited_column.max()
+            min_val = splited_column.min()
+
+            if min_val == max_val:
+                return None, None
+
             if split_column.dtype == int64:
-                grill = sample(range(min_val, max_val), 10)  # create pivot grill for int
+                grill = sample(range(min_val, max_val), min(10, max_val-min_val))  # create pivot grill for int
             else:
                 grill = uniform(min_val, max_val, 10)  # create pivot grill for float
 
@@ -96,8 +101,9 @@ class Leaf:
     def set_leaf_tag(self):
         value_counts = self.tree.genetree.label[self.partition].value_counts()
         self.tags_count = [value_counts[label] if label in value_counts.index else 0 for label in self.tree.genetree.label_binarizer.classes_]
+        return 0
 
-# Return the expected class
+    # Return the expected class
     def evaluate(self, tree, criteria, probability=False):
         total = sum(self.tags_count)   # If total is 0, then the leaf has no train data
         if probability:
@@ -108,9 +114,9 @@ class Leaf:
             return probabilities
         else:
             if total != 0:
-                return self.tree.genetree.label_binarizer.classes_[pd.Series(self.tags_count).idxmax()] * len(criteria)
+                return [self.tree.genetree.label_binarizer.classes_[pd.Series(self.tags_count).idxmax()]] * len(criteria)
             else:    # give most frequent tag in train data
-                return self.tree.genetree.label_binarizer.classes_[pd.Series(self.tree.genetree.tags_count).idxmax()] * len(criteria)
+                return [self.tree.genetree.label_binarizer.classes_[pd.Series(self.tree.genetree.tags_count).idxmax()]] * len(criteria)
 
     # Plot the try, on terminal by now
     def plot(self):
@@ -118,8 +124,8 @@ class Leaf:
         return None
 
     # The selection arrived to a leaf, so return the parent of that leaf
-    def select_random_branch(self):
-        return None, False
+    def select_random_branch(self, min_depth):
+        return None, False, 0
 
     def get_num_nodes(self):
         return 0
@@ -128,6 +134,6 @@ class Leaf:
         return
 
     def repartition(self, partition):
-        self.partition = partition
+        self.partition = partition.collect().get_column('b').to_numpy()
         self.set_leaf_tag()
-        return
+        return 0

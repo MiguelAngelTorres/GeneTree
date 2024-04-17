@@ -12,5 +12,7 @@ def accuracy(y_true, y_pred):
     return accuracy_score(y_true, y_pred)
 
 
-def auc(y_true, proba_pred):
+def auc(y_true, proba_pred, labels):
+    if len(labels) == 2:
+        return roc_auc_score(y_true, proba_pred[:, 1])
     return roc_auc_score(y_true, proba_pred)
