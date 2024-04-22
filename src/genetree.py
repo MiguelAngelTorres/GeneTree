@@ -66,6 +66,7 @@ class Genetree:
         self.label_binarizer.fit(self.label)
         self.label_binarized = self.label_binarizer.fit_transform(self.label)
         value_counts = self.label.value_counts()
+        self.label_np = self.label.to_numpy()
         self.tags_count = [value_counts[label] if label in value_counts.index else 0 for label in self.label_binarizer.classes_]
         self.data = pl.from_pandas(data).lazy()
         self.score_function = score_function
@@ -95,7 +96,8 @@ class Genetree:
         tree_score = []
         if self.score_function == 'accuracy':
             for tree in self.tree_population:
-                tree_score.append(accuracy(self.label, tree.evaluate(self.data)))
+                tree_score.append(accuracy(self.label_np, tree.evaluate(self.data)))
+
         elif self.score_function == 'auc':
             for tree in self.tree_population:
                 tree_score.append(auc(self.label_binarized, tree.evaluate(self.data, probability=True), self.label_binarizer.classes_))
@@ -103,6 +105,7 @@ class Genetree:
         return tree_score
 
     def calculate_reproductivity_score(self):
+
         tree_score = self.score_trees()
 
         if len(np.unique(tree_score)) > 1:
@@ -122,7 +125,6 @@ class Genetree:
     def next_generation(self):
 
         reproductivity_score = self.calculate_reproductivity_score()
-
         probs = np.random.uniform(0, 1, self.num_trees * 2)
 
         next_generation = []
