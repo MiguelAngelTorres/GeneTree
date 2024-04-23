@@ -12,8 +12,10 @@ from polars import col
 
 class Genetree:
     tree_population = None  # Tree array with population
-    data = None             # Train data
-    label = None            # Train target
+    data = None             # Train data as polars dataframe
+    label = None            # Train target as pandas Series #TODO: Is faster to include in data polars dataframe?
+    label_np = None         # Train target as numpy array
+    label_binarized = None  # Train target binarized with label_binarizer
     label_binarizer = None  # Auxiliar array with column target binarized
     tags_count = None       # Counter of tags for train data
 
@@ -26,6 +28,7 @@ class Genetree:
 
     features = None             # Features
     n_features = None           # Number of features
+    n_rows = None               # Number of observations
 
     def __init__(self, data, label, num_trees=100, num_rounds=50, deepness=1, min_child_per_leaf=3, score_function='accuracy'):
 
