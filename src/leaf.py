@@ -135,5 +135,9 @@ class Leaf:
 
     def repartition(self, partition):
         self.partition = partition.collect().get_column('b').to_numpy()
+        print(partition.filter(pl.col('b')).group_by("target_label").agg(pl.col('b')).collect())
+        print(partition.filter(pl.col('b')).group_by("target_label").agg(pl.col('b').len()))
+        print(partition.filter(pl.col('b')).group_by("target_label").agg(pl.col('b').len()).collect())
+
         self.set_leaf_tag()
         return 0

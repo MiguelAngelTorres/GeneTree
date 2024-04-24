@@ -71,7 +71,8 @@ class Genetree:
         value_counts = self.label.value_counts()
         self.label_np = self.label.to_numpy()
         self.tags_count = [value_counts[label] if label in value_counts.index else 0 for label in self.label_binarizer.classes_]
-        self.data = pl.from_pandas(data).lazy()
+        self.data = pl.from_pandas(data).with_columns(target_label=pl.Series(self.label_np)).lazy() # .astype(str)
+        print(self.data.collect())
         self.score_function = score_function
         self.features = list(data.columns)
         self.n_features = len(self.features)
