@@ -1,7 +1,6 @@
 from src.leaf import Leaf
 from random import randrange
 import numpy as np
-import polars as pl
 
 
 class Tree:

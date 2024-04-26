@@ -1,7 +1,6 @@
 from src.node import Node
 from src.utils import entropy
 from random import sample
-from numpy import logical_and, int64, float64
 from numpy.random import uniform
 import pandas as pd
 import polars as pl
