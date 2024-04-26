@@ -1,6 +1,7 @@
 from src.leaf import Leaf
 from random import randrange
 import numpy as np
+import polars as pl
 
 
 class Tree:
@@ -12,7 +13,7 @@ class Tree:
         self.genetree = genetree
 
     def warm(self):
-        self.root = Leaf(self, np.array([True] * self.genetree.n_rows))
+        self.root = Leaf(self, self.genetree.data.with_columns(b=True))
         self.root = self.root.warm(self.genetree.deepness)
         self.depth = self.root.set_leaf_tag()
 

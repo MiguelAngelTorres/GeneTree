@@ -13,7 +13,7 @@ from polars import col
 class Genetree:
     tree_population = None  # Tree array with population
     data = None             # Train data as polars dataframe
-    label = None            # Train target as pandas Series #TODO: Is faster to include in data polars dataframe?
+    label = None            # Train target as pandas Series
     label_np = None         # Train target as numpy array
     label_binarized = None  # Train target binarized with label_binarizer
     label_binarizer = None  # Auxiliar array with column target binarized
@@ -64,15 +64,14 @@ class Genetree:
             print('Exit with status 1 \n  Error while initialization Genetree - score_function must be on of ' + str(available_score_functions))
             sys.exit(1)
 
-        self.label = label.squeeze()
+        self.label = label.squeeze() #TODO: label is not used anymore -> remove
         self.label_binarizer = LabelBinarizer()
         self.label_binarizer.fit(self.label)
         self.label_binarized = self.label_binarizer.fit_transform(self.label)
         value_counts = self.label.value_counts()
         self.label_np = self.label.to_numpy()
         self.tags_count = [value_counts[label] if label in value_counts.index else 0 for label in self.label_binarizer.classes_]
-        self.data = pl.from_pandas(data).with_columns(target_label=pl.Series(self.label_np)).lazy() # .astype(str)
-        print(self.data.collect())
+        self.data = pl.from_pandas(data).with_columns(target_label=pl.Series(self.label_np.astype(str))).lazy()
         self.score_function = score_function
         self.features = list(data.columns)
         self.n_features = len(self.features)
