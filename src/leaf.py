@@ -27,7 +27,7 @@ class Leaf:
         shuffle_columns = sample(self.tree.genetree.features, self.tree.genetree.n_features)  # random column to split
 
         for column in shuffle_columns:
-            (partition_left, partition_right, pivot) = self.select_pivot(column)
+            partition_left, partition_right, pivot = self.select_pivot(column)
             if partition_left is not None:  # If good split
                 left = Leaf(self.tree, partition_left)
                 right = Leaf(self.tree, partition_right)
@@ -64,7 +64,7 @@ class Leaf:
 
             total = self.partition.select(pl.len()).collect().item()
             total_inverse = 1 / total
-            classes = list(dict.fromkeys(self.tree.genetree.label.unique()))
+            classes = list(dict.fromkeys(self.tree.genetree.tags_count.get_column(self.tree.genetree.label).to_numpy()))
             for x in grill:
                 left_split = self.partition.with_columns(a=(pl.col(column) < x)).with_columns(b=(pl.col("a") & pl.col("b"))).filter(pl.col('b'))
                 right_split = self.partition.with_columns(a=(pl.col(column) >= x)).with_columns(b=(pl.col("a") & pl.col("b"))).filter(pl.col('b'))
@@ -79,8 +79,8 @@ class Leaf:
                     l_entropy = 1
 
                     for clas in classes:
-                        r_entropy += entropy(right_split.filter(pl.col('target_label').eq(clas)).select(pl.len()).collect().item() / n_right)
-                        l_entropy += entropy(left_split.filter(pl.col('target_label').eq(clas)).select(pl.len()).collect().item() / n_left)
+                        r_entropy += entropy(right_split.filter(pl.col(self.tree.genetree.label).eq(clas)).select(pl.len()).collect().item() / n_right)
+                        l_entropy += entropy(left_split.filter(pl.col(self.tree.genetree.label).eq(clas)).select(pl.len()).collect().item() / n_left)
                     r_entropy = n_right * total_inverse * r_entropy
                     l_entropy = n_left * total_inverse * l_entropy
 
@@ -99,9 +99,9 @@ class Leaf:
 
     # Select the tag the leaf will have
     def set_leaf_tag(self):
-        value_counts = self.partition.filter(pl.col("b")).group_by("target_label").agg(pl.col("b").len()).collect()
-        self.tags_count = [value_counts.filter(pl.col("target_label").eq(label)).get_column("b").item()
-                           if label in value_counts.get_column("target_label").to_numpy() else 0
+        value_counts = self.partition.filter(pl.col("b")).group_by(self.tree.genetree.label).count().collect()
+        self.tags_count = [value_counts.filter(pl.col(self.tree.genetree.label).eq(label)).get_column("count").item()
+                           if label in value_counts.get_column(self.tree.genetree.label).to_numpy() else 0
                            for label in self.tree.genetree.label_binarizer.classes_]
         return 0
 
@@ -112,13 +112,13 @@ class Leaf:
             if total != 0:
                 probabilities = [[v / total for v in self.tags_count]] * len(criteria)
             else:    # give frequency of tag in train data
-                probabilities = [[v / len(criteria) for v in self.tree.genetree.tags_count]] * len(criteria)
+                probabilities = [[v / len(criteria) for v in self.tree.genetree.tags_count.get_column("count").to_numpy()]] * len(criteria)
             return probabilities
         else:
             if total != 0:
                 return [self.tree.genetree.label_binarizer.classes_[pd.Series(self.tags_count).idxmax()]] * len(criteria)
             else:    # give most frequent tag in train data
-                return [self.tree.genetree.label_binarizer.classes_[pd.Series(self.tree.genetree.tags_count).idxmax()]] * len(criteria)
+                return [self.tree.genetree.mayoritary_class] * len(criteria)
 
     # Plot the try, on terminal by now
     def plot(self):

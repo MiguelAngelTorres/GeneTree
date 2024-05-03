@@ -13,11 +13,12 @@ from polars import col
 class Genetree:
     tree_population = None  # Tree array with population
     data = None             # Train data as polars dataframe
-    label = None            # Train target as pandas Series
+    label = None            # String name of the training column in data
     label_np = None         # Train target as numpy array
     label_binarized = None  # Train target binarized with label_binarizer
-    label_binarizer = None  # Auxiliar array with column target binarized
+    label_binarizer = None  # Auxiliar model with target binarizer
     tags_count = None       # Counter of tags for train data
+    mayoritary_class = None # More frequent tag in label
 
     deepness = None             # Maximum number of consecutive nodes used to take a decision in a tree
     min_child_per_leaf = None   # Minimum number of train rows to split a leaf
@@ -35,17 +36,14 @@ class Genetree:
         if not isinstance(data, pd.DataFrame):
             print('Exit with status 1 \n  Error while initialization Genetree - data must be a pandas.DataFrame')
             sys.exit(1)
-        if not isinstance(label, pd.DataFrame):
-            print('Exit with status 1 \n  Error while initialization Genetree - label must be a pandas.DataFrame')
+        if not isinstance(label, str):
+            print('Exit with status 1 \n  Error while initialization Genetree - label must be a string')
             sys.exit(1)
         if data.shape[0] < 10:
             print('Exit with status 1 \n  Error while initialization Genetree - data must have at least 10 rows')
             sys.exit(1)
-        if len(label.columns) != 1:
-            print('Exit with status 1 \n  Error while initialization Genetree - label must have a single column with label values')
-            sys.exit(1)
-        if data.shape[0] != label.shape[0]:
-            print('Exit with status 1 \n  Error while initialization Genetree - the data and label rows cant be different')
+        if label not in data.columns:
+            print('Exit with status 1 \n  Error while initialization Genetree - label must be the name of a column present in data')
             sys.exit(1)
         if deepness < 1:
             print('Exit with status 1 \n  Error while initialization Genetree - deepness must be greater than 0')
@@ -64,16 +62,17 @@ class Genetree:
             print('Exit with status 1 \n  Error while initialization Genetree - score_function must be on of ' + str(available_score_functions))
             sys.exit(1)
 
-        self.label = label.squeeze() #TODO: label is not used anymore -> remove
+        self.label = label
+        self.label_np = data[self.label].squeeze().to_numpy()
         self.label_binarizer = LabelBinarizer()
-        self.label_binarizer.fit(self.label)
-        self.label_binarized = self.label_binarizer.fit_transform(self.label)
-        value_counts = self.label.value_counts()
-        self.label_np = self.label.to_numpy()
-        self.tags_count = [value_counts[label] if label in value_counts.index else 0 for label in self.label_binarizer.classes_]
-        self.data = pl.from_pandas(data).with_columns(target_label=pl.Series(self.label_np.astype(str))).lazy()
+        self.label_binarizer.fit(self.label_np)
+        self.label_binarized = self.label_binarizer.transform(self.label_np)
+
+        self.data = pl.from_pandas(data).lazy()
+        self.tags_count = self.data.group_by(self.label).count().collect()
+        self.mayoritary_class = self.tags_count.sort("count").select(pl.first(self.label)).item()
         self.score_function = score_function
-        self.features = list(data.columns)
+        self.features = list(self.data.select(pl.exclude(label)).columns)
         self.n_features = len(self.features)
         self.n_rows = data.shape[0]
         self.deepness = deepness
