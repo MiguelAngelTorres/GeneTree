@@ -26,18 +26,18 @@ class Tree:
     def select_random_branch(self, min_depth):
         go_deep = min_depth < self.depth
         if go_deep:
-            r = randrange(2)
+            r = randrange(-1,1,2)
         else:
-            r = randrange(3)
+            r = randrange(-self.depth-1, self.depth+1)
 
-        if r == 0:
+        if r < 0:
             if go_deep and isinstance(self.root.left, Leaf):
                 r = 1
-        if r == 1:
+        if r > 0:
             if go_deep and isinstance(self.root.right, Leaf):
-                r = 0
+                r = -1
 
-        if r == 0:
+        if r < 0:
             last_branch_side, last_branch_father, depth_branch = self.root.left.select_random_branch(min_depth)
             if isinstance(last_branch_father, bool):  # Si el elegido es el hijo
                 if last_branch_father:
@@ -46,7 +46,7 @@ class Tree:
                     last_branch_side = 'root'
                     depth_branch += 1
                 last_branch_father = self.root
-        elif r == 1:
+        elif r > 0:
             last_branch_side, last_branch_father, depth_branch = self.root.right.select_random_branch(min_depth)
             if isinstance(last_branch_father, bool):  # Si el elegido es el hijo
                 if last_branch_father:

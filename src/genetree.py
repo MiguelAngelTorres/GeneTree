@@ -91,7 +91,7 @@ class Genetree:
         for i in range(0, self.num_rounds):
             print("round: " + str(i))
             self.tree_population = self.next_generation()
-            print("Max depth: %s" % max(self.tree_population, key=lambda x: x.depth).depth)
+            print("Max depth: %s" % [tree.depth for tree in self.tree_population])
             print(sorted(self.score_trees(), reverse=True))
 
     def score_trees(self):
@@ -131,8 +131,8 @@ class Genetree:
 
         next_generation = []
         for i in range(0, self.num_trees):
-            a_tree = reproductivity_score.filter(col('score_order') <= probs[i]).head(1).collect().get_column('tree')[0]
-            b_tree = reproductivity_score.filter(col('score_order') <= probs[self.num_trees + i]).head(1).collect().get_column('tree')[0]
+            a_tree = reproductivity_score.filter(col('score_order') <= probs[i]).head(1).collect().get_column('tree').item()
+            b_tree = reproductivity_score.filter(col('score_order') <= probs[self.num_trees + i]).head(1).collect().get_column('tree').item()
 
             atree = self.crossover(a_tree, b_tree)
             next_generation.append(atree)

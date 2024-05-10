@@ -19,15 +19,15 @@ def medium_test():
 
     start = time.time()
     genetree = Genetree(data[['age', 'fnlwgt', 'education_num', 'capital_gain', 'capital_loss', 'hours_per_week', 'ammount']], 'ammount',
-                        score_function="accuracy", num_trees=10, deepness=4, num_rounds=10)
+                        score_function="accuracy", num_trees=20, deepness=5, num_rounds=10)
     genetree.train()
     end = time.time()
     print("\nMean time elapsed on warm: " + str(end-start))
 
 
 if __name__ == '__main__':
-    #small_test()
-    medium_test()
+    small_test()
+    #medium_test()
 
 
 

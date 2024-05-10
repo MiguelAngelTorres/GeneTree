@@ -57,18 +57,18 @@ class Node:
     def select_random_branch(self, min_depth):
         go_deep = min_depth < self.depth
         if go_deep:
-            r = randrange(2)
+            r = randrange(-1,1,2)
         else:
-            r = randrange(3)
+            r = randrange(-self.depth-1, self.depth+1)
 
-        if r == 0:
+        if r < 0:
             if go_deep and not isinstance(self.left, Node):
                 r = 1
-        if r == 1:
+        if r > 0:
             if go_deep and not isinstance(self.right, Node):
-                r = 0
+                r = -1
 
-        if r == 0:  # Elegida rama izq
+        if r < 0:  # Elegida rama izq
             side, father, branch_depth = self.left.select_random_branch(min_depth)
             if isinstance(father, bool):
                 if father: 		# If a son is the chosen one
@@ -76,7 +76,7 @@ class Node:
                 else:					# If son is a leaf
                     return None, True, self.depth
             return side, father, branch_depth				# If chosen one is deep
-        elif r == 1:  # Elegida rama der
+        elif r > 0:  # Elegida rama der
             side, father, branch_depth = self.right.select_random_branch(min_depth)
             if isinstance(father, bool):
                 if father: 		# If chosen one is a son
