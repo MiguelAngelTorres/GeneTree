@@ -28,7 +28,7 @@ class Tree:
         if go_deep:
             r = randrange(-1,1,2)
         else:
-            r = randrange(-self.depth-1, self.depth+1)
+            r = randrange(-self.root.left.depth, self.root.right.depth+1)
 
         if r < 0:
             if go_deep and isinstance(self.root.left, Leaf):
@@ -67,7 +67,7 @@ class Tree:
 
     def mutate(self):
         self.root.mutate()
-        self.root.repartition([True] * self.genetree.n_rows)
+        self.root.repartition(self.genetree.data.with_columns(b=True))
         return
 
     def plot(self):

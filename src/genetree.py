@@ -147,7 +147,9 @@ class Genetree:
         copying_node = a_tree.root
         tree.root = self.copy_tree(tree, copying_node, abranch, bbranch, aside, bside)
 
-        tree.repartition(self.data.with_columns(b=True))
+        tree.repartition(self.data.with_columns(b=True)) #TODO: Make a function to calculate depth
+        tree.mutate()
+        #tree.repartition(self.data.with_columns(b=True))
 
         return tree
 

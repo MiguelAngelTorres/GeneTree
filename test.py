@@ -1,14 +1,14 @@
 from src.genetree import Genetree
 import pandas as pd
 import time
-
+import random
 
 def small_test():
     data = pd.read_csv("data/Iris.csv")
 
     start = time.time()
     genetree = Genetree(data[['SepalLengthCm','SepalWidthCm','PetalLengthCm','PetalWidthCm', 'Species']], 'Species',
-                        score_function="auc", num_trees=20, deepness=4, num_rounds=10)
+                        score_function="auc", num_trees=50, deepness=4, num_rounds=200)
     genetree.train()
     end = time.time()
     print("\nMean time elapsed on warm: " + str(end-start))

@@ -59,7 +59,7 @@ class Node:
         if go_deep:
             r = randrange(-1,1,2)
         else:
-            r = randrange(-self.depth-1, self.depth+1)
+            r = randrange(-self.depth, self.depth+1)
 
         if r < 0:
             if go_deep and not isinstance(self.left, Node):
@@ -90,20 +90,19 @@ class Node:
     def get_num_nodes(self):
         return self.left.get_num_nodes() + self.right.get_num_nodes() + 1
 
-
-    # TODO
     def mutate(self):
-        r = randrange(5)
-        if r == 0:
-            self.pivot = normal(self.pivot, abs(self.pivot/4))
-        if r == 1:
-            columns = self.tree.data.columns
-            columns = columns[columns != self.column]
-            self.column = columns[randrange(len(columns))]
-            self.pivot = self.tree.data[self.column].mean()
+        r = randrange(-self.left.depth, self.right.depth+1)
+        if r < 0:
+            self.left.mutate()
+        if r > 0:
+            self.right.mutate()
 
-        self.left.mutate()
-        self.right.mutate()
+        if r == 0:
+            self.pivot = normal(self.pivot, abs(self.pivot/8))
+            #columns = self.tree.data.columns
+            #columns = columns[columns != self.column]
+            #self.column = columns[randrange(len(columns))]
+            #self.pivot = self.tree.data[self.column].mean()
         return
 
     def repartition(self, partition):
